@@ -37,6 +37,36 @@ Two construction choices that mattered:
 cluster at low PC1 flaring out into distinctive personas. Read of the axes:
 **PC1 = distinctive ↔ vacuous, PC2 = ornate ↔ plain, PC3 = poetic/mystical ↔ pseudo-academic.**
 
+### Prompt-noise robustness (Section 6h–6j)
+
+A persona vector is a mean over only a handful of eliciting questions, so before reading anything
+off the geometry we ask: **is a persona's location, and are the PCA axes themselves, an artifact of
+which prompts happened to elicit them?** Three checks, all run in the *fixed* 6e PCA frame so the
+results overlay the map directly:
+
+- **Per-question vectors (6h).** Instead of averaging, keep each eliciting question's mean response
+  activation separately (forward passes only, no new generation), giving a small cloud of points
+  per persona to measure spread over.
+- **Location wander (6i).** Bootstrap-resample each persona's questions (B = 300), project each
+  resampled mean into the 6e PCA frame, and take the per-PC standard deviation — this is the
+  *prompt-noise radius*, plotted as error bars on the map. The **median noise radius (PC1–3) is small
+  relative to the between-persona spread**, i.e. personas don't move far enough under prompt
+  resampling to swap places — the layout is real, not a prompt accident. A complementary **split-half
+  direction reliability** (cosine between the mean directions of two disjoint halves of a persona's
+  questions; 1 = a stable direction, 0 = noise) confirms most personas have a consistent direction,
+  and flags the few that don't.
+- **Axis stability (6j).** The sharper test: treat each persona as Gaussian about its location with
+  its own per-PC bootstrap std (from 6i), Monte-Carlo resample *all* points (200 draws), refit PCA
+  each time, and measure how far each top axis rotates from its 6e direction (greedy max-|cos|
+  matching) and how its explained-variance moves. **Result: the three axes we actually interpret are
+  stable — PC1 rotates ≈ 1.5°, PC2 ≈ 4°, PC3 ≈ 6° (tight error bars) — while PC4 (≈ 15°) and PC5
+  (≈ 18°) rotate far more, with error bars spanning tens of degrees.** So PC1–PC3 are trustworthy,
+  reproducible axes; PC4 and beyond are prompt-noise and are not assigned meaning. This is exactly
+  why the axis reads above stop at PC3.
+
+(Figures: `figures/prompt-noise-map.png` — the map with per-persona error bars;
+`figures/pca-axis-rotation.png` — mean axis rotation per PC.)
+
 ---
 
 ## Experiments
