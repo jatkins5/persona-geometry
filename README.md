@@ -109,6 +109,21 @@ is distinct from the persona representation* — found causally (via DAS), not b
 - **`patchscope.py`** — training-free Patchscope read-out + adversarial blind-spot search for
   persona vectors. `run_patchscope.py` is a self-contained CLI runner.
 
+## Figures
+
+`figures/make_figures.py` regenerates the whole presentation deck from `data/` alone (no model):
+
+```bash
+python figures/make_figures.py             # all figures, incl. the rotating GIFs (needs ffmpeg)
+python figures/make_figures.py --no-video  # static figures only (fast)
+```
+
+Outputs to `figures/`: the labeled rotating persona cloud, the three Experiment-1 panels
+(contamination / decomposition / steering), the Experiment-2 steering-regime plot and rotating 3D
+reachable-boundary envelope, and the two Experiment-3 panels (panel-dimension knee, interface-vs-PCA).
+Cloud/boundary figures are computed from the cached vectors and boundary maps; the Exp-1/3 figures read
+`data/exp1_results.json` / `data/exp3_results.json` (written by the notebook's cell 8k on a GPU rerun).
+
 ## Setup
 
 ```bash
