@@ -1,0 +1,13 @@
+torch>=2.2
+transformers>=4.56
+scikit-learn
+numpy
+pandas
+plotly
+jaxtyping
+tqdm
+nltk
+openai
+python-dotenv
+nbformat
+ipykernel

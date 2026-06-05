@@ -1,0 +1,227 @@
+{
+  "ref +PC1 (populated)": {
+    "coord": [
+      24.05477294921875,
+      0.0,
+      0.0
+    ],
+    "sweep": {
+      "1.0": {
+        "resp": "Starting a new chapter in life can be both exciting and daunting, but with the right mindset and approach, it can be an incredible journey of growth and discovery. Here are some pieces of advice that might help:\n\n1. **Embrace Change**: Life is all about change, and sometimes the biggest changes come when we least expect them. Embrace the unknown and see each new chapter as an opportunity to learn and grow.\n\n2. **Set Clear Goals**: Write down what you want to achieve in this new chapter. It could be something big like changing",
+        "landed": [
+          -0.5082371234893799,
+          -1.3403913974761963,
+          -9.87179946899414
+        ],
+        "distinct": 0.8191489361702128,
+        "ascii": 0.9585687382297552,
+        "readout": ", let's say, \"Curious.\""
+      },
+      "1.5": {
+        "resp": "Starting a new chapter in life can be both exciting and daunting! Here are some pieces of advice that might help:\n\n1. **Write Down Your Goals**: Before you dive into this new adventure, take some time to write down what you want to achieve. Break it down into short-term and long-term goals. This will give you something to aim for and help you stay motivated.\n\n2. **Plan Your Route**: Once you know where you're going, plan out how you'll get there. It's like setting up your GPS for the road trip",
+        "landed": [
+          1.4524701833724976,
+          -5.912472248077393,
+          -9.099693298339844
+        ],
+        "distinct": 0.8461538461538461,
+        "ascii": 0.9457831325301205,
+        "readout": "like a curious explorer."
+      },
+      "2.0": {
+        "resp": "Starting a new chapter in your life can be both exciting and a bit daunting! Here are some pieces of advice to help you make the most of this fresh start:\n\n1. **Write Down Your Dreams**: Grab that notebook and pen (or open up your favorite app) and write down all those things you want to do, see, or be. It's like setting sail on a grand adventure, but you gotta know where you're heading, right?\n\n2. **Plan Your Route**: Once you've got your dreams written down, it's time",
+        "landed": [
+          7.688426971435547,
+          -4.477690696716309,
+          -9.681304931640625
+        ],
+        "distinct": 0.8764044943820225,
+        "ascii": 0.9388185654008439,
+        "readout": "like a curious explorer."
+      },
+      "2.5": {
+        "resp": "Starting a new chapter in your life can be exciting and a little scary all at once! Here's some advice to help you make it a grand adventure:\n\n1. **Pick Up That Map and Start Planin'!** Before you jump into that car, check out that road map, and see where you're goin' gonna goin'! Write down a list of all those things you wanna do, all those places you wanna see, and all them cookies you wanna steal... okay, just maybe not the cookies, but ya know what",
+        "landed": [
+          15.865116119384766,
+          -5.931347370147705,
+          -5.495322227478027
+        ],
+        "distinct": 0.8068181818181818,
+        "ascii": 0.9473684210526315,
+        "readout": ", let's say, \"Curious.\""
+      },
+      "3.0": {
+        "resp": "Starting a new chapter in your life is like planting a seed, and it's gonna grow into a big ol' bush if you just give it a little water and sunshine, right? But nope, you gotta dig in there and give it a good ol' squeeze, see? So here's a lil' tip or two for ya:\n\n1. **Pick a tree and plant it!** You know, like, pick that one spot in the garden where you gonna stick that lil' sprig and say, \"I'm gonna make this",
+        "landed": [
+          24.682668685913086,
+          -4.450562477111816,
+          -4.422441482543945
+        ],
+        "distinct": 0.7558139534883721,
+        "ascii": 0.9394673123486683,
+        "readout": ", let's say, \"Curious.\""
+      },
+      "4.0": {
+        "resp": "Starting a new chapter in your life is like plantin' a seed, gonna' make you all tiddly-wiggy in the pants, gonna' be like, ya know, like, ya know, like, like, ya know, like, like, like, ya know, like, ya like, like, ya know, like, ya like, like, ya know, like, ya like, like, ya know, like, ya like, like, ya know, like, ya like, like, ya like, like",
+        "landed": [
+          28.818058013916016,
+          -6.883177280426025,
+          3.7312405109405518
+        ],
+        "distinct": 0.3235294117647059,
+        "ascii": 0.8942857142857142,
+        "readout": ", say, \"Curious.\""
+      }
+    }
+  },
+  "left flank [-10,20]": {
+    "coord": [
+      -10.0,
+      20.0,
+      0.0
+    ],
+    "sweep": {
+      "1.0": {
+        "resp": "Starting a new chapter in life can be both exhilarating and challenging. Here are some pieces of advice that may help guide your journey:\n\n1. **Embrace Change**: Recognize that change is a natural part of life. Each new chapter presents unique opportunities and challenges. Embracing these changes can lead to personal growth and new discoveries.\n\n2. **Set Clear Intentions**: Define what success means to you in this new chapter. Setting clear intentions can provide direction and purpose, helping you navigate through uncertainties.\n\n3. **Reflect on the Past**:",
+        "landed": [
+          -4.834541320800781,
+          -0.4822242259979248,
+          -9.1810884475708
+        ],
+        "distinct": 0.8275862068965517,
+        "ascii": 0.9484902309058615,
+        "readout": "resilience."
+      },
+      "1.5": {
+        "resp": "Embarking on a new chapter in one's life is an exciting yet often challenging endeavor. Here are several pieces of advice that can guide and inspire:\n\n1. **Embrace Curiosity**: Approach this new chapter with a spirit of curiosity and openness. Each experience, whether it be personal or professional, offers the opportunity for growth and learning.\n\n2. **Set Clear Intentions**: Define what success means to you within this new chapter. This clarity can serve as a beacon, guiding your decisions and actions.\n\n3. **Cultivate Resilience",
+        "landed": [
+          -3.712610960006714,
+          1.7999128103256226,
+          -8.034026145935059
+        ],
+        "distinct": 0.8690476190476191,
+        "ascii": 0.9476635514018692,
+        "readout": "is curious."
+      },
+      "2.0": {
+        "resp": "Embarking upon a new chapter in one's life can be both exhilarating and challenging. Here are several pieces of advice that may guide an individual through this transformative period:\n\n1. **Embrace Curiosity**: Approach the new phase with a spirit of inquiry and wonder. Embrace the unknown and seek to understand the nuances of the world around you.\n\n2. **Cultivate Resilience**: Life is inherently unpredictable, and challenges will inevitably arise. Develop a resilience that allows one to navigate through difficulties with grace and determination.\n\n3. **N",
+        "landed": [
+          -3.0297927856445312,
+          3.9687018394470215,
+          -7.27878475189209
+        ],
+        "distinct": 0.8117647058823529,
+        "ascii": 0.9535714285714286,
+        "readout": "as curious as a child."
+      },
+      "2.5": {
+        "resp": "Embarking upon a new chapter in life is an opportunity for profound growth and discovery. Here are several pieces of advice that may guide one through this transformative period:\n\n1. **Reflection and Self-Discovery**: Begin with introspection, allowing oneself to explore the depths of one's own character and aspirations. Understanding the essence of one\u2019s inner self can provide a compass for navigating the forthcoming journey.\n\n2. **Cultivation of Resilience**: Embrace challenges as opportunities for learning and development. Resilience, cultivated through adversity, serves as an",
+        "landed": [
+          -4.393429279327393,
+          5.918391704559326,
+          -6.905527114868164
+        ],
+        "distinct": 0.8313253012048193,
+        "ascii": 0.9573378839590444,
+        "readout": "as curious as a child."
+      },
+      "3.0": {
+        "resp": "Embarking upon a new chapter is an opportunity for profound transformation and discovery. Here are several pieces of advice that may guide one's journey:\n\n1. **Reflection and Introspection**: Begin with a period of introspection, where the soul is nourished through contemplation and the gathering of insights. This can be facilitated through the lens of philosophical inquiry, spiritual practices, or the cultivation of wisdom through literature and the arts.\n\n2. **Purposeful Exploration**: Engage in the pursuit of knowledge and understanding, which may lead to the discovery of the",
+        "landed": [
+          -4.0360612869262695,
+          6.529483795166016,
+          -5.700007915496826
+        ],
+        "distinct": 0.7471264367816092,
+        "ascii": 0.9606837606837607,
+        "readout": "as curious as a child."
+      },
+      "4.0": {
+        "resp": "Embarking upon a new chapter in one's life is both a profound and transformative journey, rich with the potential for discovery and renewal. Here are several guiding principles that may illuminate the path:\n\n1. **Reflection and Introspection**: Begin with a profound introspection of the soul, wherein the individual discerns the aspirations that resonate within the heart and the wisdom that has been garnered through the preceding phases of life. This process serves as a beacon, illuminating the pathways of purpose and aspiration.\n\n2. **Cultivation of the Intellectual and Philosoph",
+        "landed": [
+          -2.1642367839813232,
+          10.972907066345215,
+          -5.243996620178223
+        ],
+        "distinct": 0.7303370786516854,
+        "ascii": 0.9675767918088737,
+        "readout": "as curious as a child."
+      }
+    }
+  },
+  "right flank [-15,-5]": {
+    "coord": [
+      -15.0,
+      -5.0,
+      0.0
+    ],
+    "sweep": {
+      "1.0": {
+        "resp": "Starting a new chapter in life can be an exciting yet challenging experience. Here are some pieces of advice that might help:\n\n1. **Set Clear Goals**: Define what success means to you in this new phase. Setting clear, achievable goals can provide direction and motivation.\n\n2. **Reflect on Past Experiences**: Consider what you have learned from previous experiences. This can help you make informed decisions and avoid repeating past mistakes.\n\n3. **Embrace Change**: Be open to new opportunities and changes. Change is a natural part of life, and embracing it",
+        "landed": [
+          -5.416324615478516,
+          -3.3979780673980713,
+          -8.204566955566406
+        ],
+        "distinct": 0.8444444444444444,
+        "ascii": 0.946524064171123,
+        "readout": ". Please provide the snapshot for a more specific analysis."
+      },
+      "1.5": {
+        "resp": "Starting a new chapter in life can be an exciting and transformative period. Here are some pieces of advice that might help:\n\n1. **Set Clear Goals**: Define what you want to achieve in your new chapter. Setting specific, measurable, achievable, relevant, and time-bound (SMART) goals can provide direction and motivation.\n\n2. **Reflect on Your Values**: Understand what is important to you. Aligning your actions with your values can help guide your decisions and ensure that your new chapter aligns with your personal values and aspirations.\n\n3. **Em",
+        "landed": [
+          -5.868443012237549,
+          -4.116440773010254,
+          -7.240124702453613
+        ],
+        "distinct": 0.7701149425287356,
+        "ascii": 0.9437386569872959,
+        "readout": ". Please provide the snapshot for a more specific analysis."
+      },
+      "2.0": {
+        "resp": "Starting a new chapter in life can be both exciting and challenging. Here are some pieces of advice that may help:\n\n1. **Set Clear Goals**: Define what success means to you in your new chapter. Setting clear, achievable goals can provide direction and motivation.\n\n2. **Reflect on Your Values**: Understanding your core values can help guide your decisions and actions as you move forward. Reflect on what is important to you and align your goals with these values.\n\n3. **Embrace Change**: Be open to change and view it as an opportunity for growth",
+        "landed": [
+          -6.213068008422852,
+          -3.3856141567230225,
+          -8.628220558166504
+        ],
+        "distinct": 0.7956989247311828,
+        "ascii": 0.948905109489051,
+        "readout": "and curious."
+      },
+      "2.5": {
+        "resp": "Starting a new chapter in life can be an exciting and transformative process. Here are some general pieces of advice that can help individuals navigate this phase effectively:\n\n1. **Set Clear Goals**: Define what success means for you in your new chapter. Setting clear, achievable goals can provide direction and motivation.\n\n2. **Reflect on Past Experiences**: Reflect on past experiences and learn from them. Understanding what has worked and what hasn't can help in making informed decisions.\n\n3. **Develop a Growth Mindset**: Adopt a mindset that views challenges as opportunities for",
+        "landed": [
+          -6.818337917327881,
+          -3.235727548599243,
+          -8.12513542175293
+        ],
+        "distinct": 0.8131868131868132,
+        "ascii": 0.9507640067911715,
+        "readout": "and curious."
+      },
+      "3.0": {
+        "resp": "Starting a new chapter in life can be both exciting and challenging. Here are some general advice that can help individuals navigate through this process:\n\n1. **Set Clear Goals**: Define what the new chapter means for you. This could include personal, professional, or educational goals. Setting clear goals can provide direction and motivation.\n\n2. **Develop a Plan**: Based on your goals, develop a plan that outlines steps to achieve these goals. Break down larger goals into smaller, manageable steps.\n\n3. **Maintain a Positive Mindset**: A positive mindset is",
+        "landed": [
+          -7.405078411102295,
+          -4.619062423706055,
+          -7.934197425842285
+        ],
+        "distinct": 0.875,
+        "ascii": 0.9432624113475178,
+        "readout": "and curious."
+      },
+      "4.0": {
+        "resp": "Starting a new chapter can be both exciting and challenging. Here are some general advice that can help individuals effectively navigate new situations and make the most of their new circumstances:\n\n1. **Set Clear Goals**: Define what the new chapter means for you. This can include personal, professional, or specific goals. Setting clear goals can provide direction and help manage expectations.\n\n2. **Develop a Plan**: Based on your goals, develop a plan that outlines steps to achieve these goals. This can include educational requirements, skills development, and actions related to career or personal",
+        "landed": [
+          -7.75352668762207,
+          -4.613239765167236,
+          -7.398416042327881
+        ],
+        "distinct": 0.7741935483870968,
+        "ascii": 0.9587458745874587,
+        "readout": ". Please provide the snapshot for a more specific analysis."
+      }
+    }
+  }
+}

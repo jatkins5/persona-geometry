@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+# Uncomment to stop tracking the (regenerable, ~30MB) data caches:
+# data/
