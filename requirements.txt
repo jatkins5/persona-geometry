@@ -1,5 +1,9 @@
-torch>=2.2
+# Install torch separately from the CUDA-12.4 index, NOT from PyPI:
+#   pip install "torch==2.6.0+cu124" --index-url https://download.pytorch.org/whl/cu124
+# (Oscar GPU driver 575 = CUDA 12.9; the default PyPI cu13 wheel is too new and
+#  fails with "NVIDIA driver is too old".)
 transformers>=4.56
+accelerate
 scikit-learn
 numpy
 pandas

@@ -3,5 +3,7 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 .DS_Store
+# papermill-executed notebooks + sbatch logs
+runs/
 # Uncomment to stop tracking the (regenerable, ~30MB) data caches:
 # data/
