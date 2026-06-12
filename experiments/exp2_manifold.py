@@ -42,7 +42,7 @@ def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--model", default="llama3.1-8b", choices=list(pl.MODELS))
     ap.add_argument("--mode", default="calibrate",
-                    choices=["calibrate", "boundary", "reachability"])
+                    choices=["calibrate", "boundary", "reachability", "variance"])
     ap.add_argument("--n-sample", type=int, default=40,
                     help="reachability mode: number of personas to probe (stratified by own norm)")
     ap.add_argument("--mags", default=None,
@@ -282,11 +282,60 @@ def _plot_reachability(rows, path):
     fig.tight_layout(); fig.savefig(path, dpi=140); plt.close(fig)
 
 
+def run_variance(model_key, out_dir, top=30):
+    """Plot the persona-space PCA variance spectrum (the dimensionality of the persona cloud),
+    overlaying every model with cached vectors for comparison. No model/GPU needed -- just the
+    cached persona vectors. Reports per-PC explained variance, where cumulative variance hits 90%,
+    and the participation ratio (effective dimensionality = 1 / sum(evr^2))."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    pool = pl.load_trait_pool()
+    specs = {}
+    for mk in pl.MODELS:
+        try:
+            _, _, Vc, _ = pl.load_persona_frame(pool, mk)
+        except (FileNotFoundError, RuntimeError):
+            continue
+        specs[mk] = PCA().fit(Vc.numpy()).explained_variance_ratio_
+
+    print(f"persona-space PCA dimensionality ({len(pool)} personas):")
+    for mk, evr in specs.items():
+        pr = 1.0 / float(np.sum(evr ** 2))
+        cum90 = int(np.argmax(np.cumsum(evr) >= 0.9)) + 1
+        print(f"  {mk:>12}: PC1-5 = {np.round(evr[:5], 3)}   90% var by PC{cum90}   "
+              f"participation_ratio = {pr:.1f}")
+    _plot_variance(specs, model_key, out_dir / f"pca_variance_{model_key}.png", top)
+    print(f"done -> {out_dir}")
+
+
+def _plot_variance(specs, emphasis, path, top):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
+    for mk, evr in specs.items():
+        n = min(top, len(evr))
+        x = np.arange(1, n + 1)
+        lw, alpha = (2.5, 1.0) if mk == emphasis else (1.5, 0.7)
+        ax1.plot(x, evr[:n] * 100, "-o", ms=4, lw=lw, alpha=alpha, label=mk)
+        ax2.plot(np.arange(1, len(evr) + 1), np.cumsum(evr) * 100, lw=lw, alpha=alpha, label=mk)
+    ax1.set_xlabel("principal component"); ax1.set_ylabel("explained variance (%)")
+    ax1.set_title("Per-PC variance (scree)"); ax1.legend(); ax1.set_yscale("log")
+    ax2.axhline(90, color="grey", ls=":", lw=1); ax2.set_xlim(0, min(60, max(len(e) for e in specs.values())))
+    ax2.set_xlabel("number of PCs"); ax2.set_ylabel("cumulative variance (%)")
+    ax2.set_title("Cumulative variance"); ax2.legend()
+    fig.suptitle("Persona-space dimensionality (PCA of centered persona vectors)")
+    fig.tight_layout(); fig.savefig(path, dpi=140); plt.close(fig)
+    print(f"saved -> {path}")
+
+
 def main() -> None:
     args = parse_args()
     cfg = pl.get_config(args.model)
     out_dir = args.out_dir or (Path(__file__).resolve().parent / "results"
                                / f"exp2_manifold{cfg.cache_suffix}")
+    if args.mode == "variance":            # cached-vectors only -- no model load / no GPU
+        run_variance(args.model, out_dir)
+        return
     print(f"loading {cfg.hf_id} + PCA frame ...")
     model, tokenizer, device = pl.load_model(args.model)
     names, Vp, Vc, centroid, pca, coords, components, evr = build_pca_frame(args.model)
