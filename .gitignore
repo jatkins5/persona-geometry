@@ -5,5 +5,10 @@ __pycache__/
 .DS_Store
 # papermill-executed notebooks + sbatch logs
 runs/
+# scaled-experiment outputs (logs.csv, figures, slurm logs)
+experiments/results/
+# large all-layer activation tensors (intermediate for layer selection; the single-layer
+# persona-vectors file is what downstream actually uses)
+data/persona_pool_alllayer__*.pt
 # Uncomment to stop tracking the (regenerable, ~30MB) data caches:
 # data/
