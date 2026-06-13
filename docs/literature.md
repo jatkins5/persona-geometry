@@ -5,10 +5,10 @@ representations, (2) *tests* of whether "persona" is a real/clean/controllable a
 (3) the *persona selection model* (PSM) as a theory of how LLMs work — plus the methods we use
 (activation steering, DAS).
 
-> Citations were gathered via web search/fetch (June 2026). **Persona Vectors figures have been
-> verified against the actual PDF.** Remaining numbers marked *(reported)* come from automated
-> HTML/PDF extraction (notably the Assistant Axis and OpenAI EM figures) and should be confirmed
-> against the source before citing. Very recent (2026) preprints are flagged; skim for fit first.
+> Citations were gathered via web search/fetch (June 2026). **Persona Vectors, the Assistant Axis,
+> and DAS have been verified against their PDFs.** The remaining numbers marked *(reported)* — the
+> OpenAI Emergent-Misalignment figures (§3) — come from automated HTML extraction and should be
+> confirmed against the source before citing. Very recent (2026) preprints are flagged; skim first.
 
 ---
 
@@ -33,14 +33,19 @@ representations, (2) *tests* of whether "persona" is a real/clean/controllable a
   - Key methodological contrast with us: **contrastive** pairs vs our **positive-only,
     pool-centered** vectors; **3 traits vs 220**.
 
-- **The Assistant Axis: Situating and Stabilizing the Default Persona of Language Models** (2026).
-  [arXiv:2601.10387](https://arxiv.org/abs/2601.10387). The closest geometric analog. *(reported)*
-  models **Gemma-2-27B, Qwen-3-32B, Llama-3.3-70B**, middle residual layer; **275 archetypes →
-  377–463 role vectors; 240 trait vectors**; persona components explain **19.4–33.6%** of activation
-  variance; **4–19 components needed for 70% variance, varying by model**; PC1 ("Assistant Axis")
-  loadings correlate **>0.92 across models** while PC2–3 diverge (0.56–0.89). Independently supports
-  two of our findings: persona-space **dimensionality is model-dependent**, and a single leading
-  axis is cross-model-consistent. They stabilize behavior by clamping activations along the axis.
+- **The Assistant Axis: Situating and Stabilizing the Default Persona of Language Models** — Lu,
+  Gallagher, Michala, Fish, Lindsey (Anthropic, 2026). [arXiv:2601.10387](https://arxiv.org/abs/2601.10387).
+  The closest geometric analog. **Verified against the PDF:** models **Gemma-2-27B, Qwen-3-32B,
+  Llama-3.3-70B**; **middle residual layer**; role vectors are **positive-only** (mean over response
+  tokens of system-prompted role-play — same family of method as ours), **275 roles → 377–463 role
+  vectors; 240 traits**; persona components explain **19.4–33.6%** of *total* activation variance
+  (n=18,777 LMSYS-Chat); **4–19 components for 70% variance, varying by model**; PC1 ("Assistant
+  Axis") role-loadings correlate **>0.92 across models** while PC2–3 diverge (0.56–0.89); the default
+  Assistant sits at the **extreme of PC1** (proj. 0.03) but mid-range on others (0.27–0.50). They
+  stabilize behavior by clamping activations along the axis, and find the axes are **already present
+  in base models** (pretraining) — direct support for the persona selection model. Independently
+  corroborates our finding that persona-space **dimensionality is model-dependent**; we add the
+  *causal steerability* consequence they don't measure.
 
 - **The Linear Representation Hypothesis and the Geometry of LLMs** — Park, Choe, Veitch
   (ICML 2024). [arXiv:2311.03658](https://arxiv.org/abs/2311.03658). Plus **The Geometry of
