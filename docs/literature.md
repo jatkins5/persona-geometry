@@ -5,9 +5,10 @@ representations, (2) *tests* of whether "persona" is a real/clean/controllable a
 (3) the *persona selection model* (PSM) as a theory of how LLMs work — plus the methods we use
 (activation steering, DAS).
 
-> Citations were gathered via web search/fetch (June 2026). A few quantitative figures below were
-> extracted by an automated reader from PDFs and are marked *(reported — verify against paper)*.
-> Very recent (2026) preprints are flagged; skim for fit before citing.
+> Citations were gathered via web search/fetch (June 2026). **Persona Vectors figures have been
+> verified against the actual PDF.** Remaining numbers marked *(reported)* come from automated
+> HTML/PDF extraction (notably the Assistant Axis and OpenAI EM figures) and should be confirmed
+> against the source before citing. Very recent (2026) preprints are flagged; skim for fit first.
 
 ---
 
@@ -15,13 +16,22 @@ representations, (2) *tests* of whether "persona" is a real/clean/controllable a
 
 - **Persona Vectors: Monitoring and Controlling Character Traits in Language Models** — Chen,
   Arditi, Sleight, Evans, Lindsey et al. (Anthropic, 2025). [arXiv:2507.21509](https://arxiv.org/abs/2507.21509).
-  The direct antecedent of this project. Extracts a per-trait direction (mean activation
-  *difference* between trait-eliciting and contrastive prompts) and uses it to steer, monitor, and
-  flag training data. *(reported)* base models **Llama-3.1 8B/70B and Qwen-2.5**; extraction layer
-  ~**15 (8B) / 31 (70B)**; **~20 traits**; steering coefficients ~−1…+1; **steering produces larger
-  trait shifts than prompting**. Note two methodological contrasts with us: they use *contrastive*
-  pairs (we use **positive-only** mean response activations centered on the pool mean), and ~20
-  traits vs our **220**.
+  The direct antecedent of this project. Extracts a per-trait direction and uses it to steer,
+  monitor, and flag training data. **Verified from the paper (pages 1–9):**
+  - Base models are **Qwen2.5-7B-Instruct and Llama-3.1-8B-Instruct — exactly our two models** (§3.1).
+  - **Contrastive** extraction: 5 positive/negative system-prompt pairs × 40 eval questions, 10
+    rollouts each, filtered by an LLM "trait expression score" (keep >50 / <50), mean over
+    **response** tokens, one vector per layer; the **best layer is selected by steering
+    effectiveness** (Appendix B.4; Qwen trait-steering peaks ~layers 15–20 in Fig 3).
+  - Main text studies **3 traits — evil, sycophancy, hallucination** — plus a few more (optimism,
+    humor) in the appendix. (We study **220**.)
+  - Steering `h ← h + α·v` with α up to ~2.5; results gated to **coherence score > 75** (the same
+    idea as our distinct/ascii/english coherence proxy).
+  - Monitoring works: projecting the last-prompt-token activation onto the persona vector predicts
+    later trait expression (**r = 0.75–0.83**); finetuning shift along the vector predicts trait
+    change (**r = 0.76–0.97**, vs cross-trait baseline 0.34–0.86).
+  - Key methodological contrast with us: **contrastive** pairs vs our **positive-only,
+    pool-centered** vectors; **3 traits vs 220**.
 
 - **The Assistant Axis: Situating and Stabilizing the Default Persona of Language Models** (2026).
   [arXiv:2601.10387](https://arxiv.org/abs/2601.10387). The closest geometric analog. *(reported)*
@@ -115,14 +125,14 @@ This project: **Qwen2.5-7B-Instruct (layer 20)** and **Llama-3.1-8B-Instruct (la
 
 | Dimension | Persona Vectors (Anthropic) | Assistant Axis (2026) | **This project** |
 |---|---|---|---|
-| Models | Llama-3.1 8B/70B, Qwen-2.5 | Gemma-2-27B, Qwen-3-32B, Llama-3.3-70B | Qwen2.5-7B, Llama-3.1-8B |
-| Extraction | contrastive (pos−neg) | role/trait vectors | positive-only, pool-centered |
-| # traits | ~20 | 240 traits / 275 roles | 220 traits |
-| Extraction layer | ~15 (8B) / 31 (70B) *(rep.)* | middle residual | 20 (Qwen) / 23 (Llama) |
+| Models | **Qwen2.5-7B, Llama-3.1-8B** (same as us) | Gemma-2-27B, Qwen-3-32B, Llama-3.3-70B | Qwen2.5-7B, Llama-3.1-8B |
+| Extraction | contrastive (pos−neg), response tokens | role/trait vectors | positive-only, pool-centered |
+| # traits | 3 main (+appendix) | 240 traits / 275 roles | 220 traits |
+| Extraction layer | best-by-steering (Qwen ~15–20) | middle residual | 20 (Qwen) / 23 (Llama) |
 | PC1 variance | — | 19.4–33.6% (persona space total) | **Qwen 47% / Llama 29%** |
 | Dimensionality | — | **4–19 comps for 70% var (model-dependent)** | **90% var: Qwen PC24 / Llama PC41; participation ratio 4.1 / 8.9** |
 | Cross-model | — | PC1 >0.92 correlated; PC2-3 diverge | Llama ~2× higher-dim than Qwen |
-| Steering vs prompting | steering > prompting | — | **steering reaches only 62% (Llama) / 86% (Qwen) of a persona's own location before coherence breaks** |
+| Steering / monitoring | proj. monitoring r=0.75–0.83; finetune-shift r=0.76–0.97 | — | **steering reaches only 62% (Llama) / 86% (Qwen) of a persona's own location before coherence breaks** |
 | Lexical vs behavioral | — | — | persona ≈ **90–93% behavioral residual, ~7–10% lexical**; lexical content not frequency-driven |
 | Low-dim causal control | — | clamp along Assistant Axis | DAS panel **k ≈ 5–6** (Exp 3) |
 
