@@ -43,7 +43,16 @@ POOL_N_Q = 6   # questions each persona has cached responses for (notebook POOL_
 def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--model", default="llama3.1-8b", choices=list(pl.MODELS))
-    ap.add_argument("--n-personas", type=int, default=8, help="strongest personas for the 8g panel sweep")
+    ap.add_argument("--n-personas", type=int, default=8, help="personas for the 8h clean-run control")
+    ap.add_argument("--n-train", type=int, default=12, help="8g: personas to TRAIN the projector on")
+    ap.add_argument("--n-test", type=int, default=12,
+                    help="8g: DISJOINT personas to measure held-out CE on (never seen in training)")
+    ap.add_argument("--n-test-pairs", type=int, default=12, help="8g: held-out test pairs to average CE over")
+    ap.add_argument("--split-seed", type=int, default=-1,
+                    help="8g: if >=0, RANDOMLY assign train/test personas (drawn from the strongest "
+                         "--candidate-pool) with this seed, instead of the strongest-vs-next split")
+    ap.add_argument("--candidate-pool", type=int, default=40,
+                    help="8g: pool of strongest personas to randomly draw train/test from (with --split-seed)")
     ap.add_argument("--k-list", default="1,2,3,4,6,8,12")
     ap.add_argument("--seeds", default="0,1,2", help="training seeds to average the held-out CE over")
     ap.add_argument("--steps", type=int, default=150, help="SGD steps per (k, seed)")
@@ -145,32 +154,38 @@ class Exp3:
 
 
 # ---- the three measurements ----------------------------------------------------------
-def panel_dimension(E: Exp3, personas, k_list, seeds, steps, lr, coeff, eps) -> dict:
-    """8g: held-out interchange CE vs k (learned multi-seed, random, full-difference P=I)."""
+def panel_dimension(E: Exp3, train_personas, test_personas, n_test_pairs, k_list, seeds,
+                    steps, lr, coeff, eps) -> dict:
+    """8g: held-out interchange CE vs k, training P on `train_personas` and measuring CE on a
+    DISJOINT `test_personas` set (so the projector never saw the test personas' directions)."""
     d_model = E.Vc.shape[1]
-    all_pairs = [(a, b) for a in personas for b in personas if a != b]
-    held = all_pairs[::13][:4]
-    train = [p for p in all_pairs if p not in held]
-    diff_of = {(a, b): E.diff(a, b) for a, b in all_pairs}
-    order = [(p, q) for p in train for q in E.questions]
+    train_pairs = [(a, b) for a in train_personas for b in train_personas if a != b]
+    test_all = [(a, b) for a in test_personas for b in test_personas if a != b]
+    stride = max(1, len(test_all) // n_test_pairs)
+    test_pairs = test_all[::stride][:n_test_pairs]
+    diff_train = {(a, b): E.diff(a, b) for a, b in train_pairs}   # used only for training
+    diff_test = {(a, b): E.diff(a, b) for a, b in test_pairs}     # used only for evaluation
+    order = [(p, q) for p in train_pairs for q in E.questions]
 
     eye = t.eye(d_model, device=E.dev)
-    ref = E.heldout_ce(eye, held, diff_of, coeff)             # full-difference reference (P=I)
-    zero = E.heldout_ce(t.zeros(d_model, d_model, device=E.dev), held, diff_of, coeff)  # no intervention
+    ref = E.heldout_ce(eye, test_pairs, diff_test, coeff)         # full-difference reference (P=I)
+    zero = E.heldout_ce(t.zeros(d_model, d_model, device=E.dev), test_pairs, diff_test, coeff)
 
-    print(f"\n8g panel dimension ({len(personas)} personas, {len(train)} train / {len(held)} held-out pairs):")
+    print(f"\n8g panel dimension: train on {len(train_personas)} personas ({len(train_pairs)} pairs) "
+          f"-> test on {len(test_personas)} DISJOINT personas ({len(test_pairs)} pairs):")
     print(f"  no-intervention CE (P=0): {zero:.3f}   full-difference CE (P=I): {ref:.3f}")
     print(f"  {'k':>3} | {'learned (mean +/- sd)':>24} | {'random':>8}")
     out = {"k": k_list, "learned_mean": [], "learned_sd": [], "random_mean": [],
-           "full_diff_ref": ref, "no_intervention": zero}
+           "full_diff_ref": ref, "no_intervention": zero, "n_train_personas": len(train_personas),
+           "n_test_personas": len(test_personas), "n_test_pairs": len(test_pairs)}
     for k in k_list:
-        learned = [E.heldout_ce(E.train_subspace(k, s, steps, lr, coeff, order, diff_of),
-                                held, diff_of, coeff) for s in seeds]
+        learned = [E.heldout_ce(E.train_subspace(k, s, steps, lr, coeff, order, diff_train),
+                                test_pairs, diff_test, coeff) for s in seeds]
         randoms = []
         for s in seeds:
             t.manual_seed(500 + s)
             randoms.append(E.heldout_ce(projector(t.randn(d_model, k, device=E.dev), eps).detach(),
-                                        held, diff_of, coeff))
+                                        test_pairs, diff_test, coeff))
         out["learned_mean"].append(float(np.mean(learned)))
         out["learned_sd"].append(float(np.std(learned)))
         out["random_mean"].append(float(np.mean(randoms)))
@@ -329,11 +344,24 @@ def main() -> None:
 
     E = Exp3(model, tokenizer, cfg, Vc, centroid, pca, names, systems, responses,
              questions, args.resp_tokens, args.eps)
-    strongest = [names[i] for i in Vc.norm(dim=1).argsort(descending=True)[: args.n_personas].tolist()]
-    print(f"device={device}  model={cfg.key}  site=layer {cfg.steer_layer}  panel personas: "
-          f"{', '.join(strongest)}")
+    # disjoint train/test persona split, so the projector never sees the test personas' directions
+    # -- a true generalization test of the shared causal subspace. --split-seed randomizes the
+    # assignment within the strongest pool (removes the strong-vs-weak confound of the ranked split).
+    ranked = [names[i] for i in Vc.norm(dim=1).argsort(descending=True).tolist()]
+    if args.split_seed >= 0:
+        import random as _random
+        pick = _random.Random(args.split_seed).sample(ranked[: args.candidate_pool],
+                                                       args.n_train + args.n_test)
+        train_personas, test_personas = pick[: args.n_train], pick[args.n_train:]
+    else:
+        train_personas = ranked[: args.n_train]
+        test_personas = ranked[args.n_train: args.n_train + args.n_test]
+    print(f"device={device}  model={cfg.key}  site=layer {cfg.steer_layer}  split_seed={args.split_seed}")
+    print(f"  train personas ({len(train_personas)}): {', '.join(train_personas)}")
+    print(f"  test  personas ({len(test_personas)}): {', '.join(test_personas)}")
 
-    panel = panel_dimension(E, strongest, k_list, seeds, args.steps, args.lr, args.coeff, args.eps)
+    panel = panel_dimension(E, train_personas, test_personas, args.n_test_pairs, k_list, seeds,
+                            args.steps, args.lr, args.coeff, args.eps)
     # pick the panel dimension as the smallest k within 1 SD of the best learned CE
     best = min(panel["learned_mean"])
     knee_k = next(k for k, m, sd in zip(k_list, panel["learned_mean"], panel["learned_sd"])
@@ -342,13 +370,17 @@ def main() -> None:
 
     control = distinct = None
     if not args.panel_only:
-        control = clean_run_control(E, strongest, knee_k, args.steps, args.lr, args.coeff, args.eps)
+        control = clean_run_control(E, train_personas[: args.n_personas], knee_k,
+                                    args.steps, args.lr, args.coeff, args.eps)
         distinct = distinct_interface(E, args.big_n, args.big_k, args.big_steps, args.lr, args.coeff, args.eps)
 
     params = {
         "experiment": "exp3_das", "model_key": cfg.key, "model": cfg.hf_id,
         "timestamp_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "das_layer": cfg.steer_layer, "n_personas": args.n_personas, "k_list": k_list, "seeds": seeds,
+        "das_layer": cfg.steer_layer, "n_train": args.n_train, "n_test": args.n_test,
+        "n_test_pairs": args.n_test_pairs, "split_seed": args.split_seed,
+        "train_personas": train_personas, "test_personas": test_personas,
+        "n_personas": args.n_personas, "k_list": k_list, "seeds": seeds,
         "steps": args.steps, "lr": args.lr, "coeff": args.coeff, "resp_tokens": args.resp_tokens,
         "big_n": args.big_n, "big_k": args.big_k, "big_steps": args.big_steps,
         "panel_only": args.panel_only,
