@@ -118,8 +118,9 @@ representations, (2) *tests* of whether "persona" is a real/clean/controllable a
   (DAS)** — Geiger, Wu, Potts, Icard, Goodman (2024).
   [arXiv:2303.02536](https://arxiv.org/abs/2303.02536); **Boundless DAS** (Wu et al., scales to
   Alpaca-7B, finding *compact, localized* interpretable subspaces). The method behind our Exp 3
-  causal-interface search; DAS learns a rotation by gradient descent and intervenes on a subspace —
-  we use it to find the ~5–6-dim persona "panel."
+  causal-interface search; DAS learns a rotation by gradient descent and intervenes on a subspace.
+  (Our within-set DAS suggested a ~5–6-dim persona "panel," but a persona-disjoint re-test removed
+  it — see §5/§6 — a caution that interchange results need held-out *entities*, not just held-out pairs.)
 
 ---
 
@@ -139,18 +140,26 @@ This project: **Qwen2.5-7B-Instruct (layer 20)** and **Llama-3.1-8B-Instruct (la
 | Cross-model | — | PC1 >0.92 correlated; PC2-3 diverge | Llama ~2× higher-dim than Qwen |
 | Steering / monitoring | proj. monitoring r=0.75–0.83; finetune-shift r=0.76–0.97 | — | **steering reaches only 62% (Llama) / 86% (Qwen) of a persona's own location before coherence breaks** |
 | Lexical vs behavioral | — | — | persona ≈ **90–93% behavioral residual, ~7–10% lexical**; lexical content not frequency-driven |
-| Low-dim causal control | — | clamp along Assistant Axis | DAS panel **k ≈ 5–6** (Exp 3) |
+| DAS causal control (within-set) | — | clamp along Assistant Axis | apparent panel **k ≈ 5–6** |
+| DAS — **persona-disjoint** (Exp 3) | — | — | **no compact panel; ~0.4–0.6 of effect recovered at k=24 on unseen personas; Llama 0.58±0.03 ≫ Qwen 0.41±0.21 stability** |
 
 Adjacent low-dim-control result: the OpenAI EM paper finds essentially **one** dominant controlling
-persona feature; our Exp 3 finds a **~5–6-dim** causal interface — both support "persona is
-*controlled* through a low-dimensional subspace," at different granularities.
+persona feature, and our *within-set* DAS suggested a ~5–6-dim interface — but our **persona-disjoint**
+re-test (train `P` on one persona set, evaluate CE on a disjoint set) **removed the compact panel**:
+on *unseen* personas neither model has a low-dimensional generalizing interface (the within-set
+plateau was largely memorization of the training personas, whose ~7–11-dim span a k≳7 subspace can
+absorb). A shared low-dim subspace transfers *consistently* in Llama but only *erratically* in Qwen.
+**Methodological lesson:** interchange/DAS panel claims need held-out **entities**, not just held-out
+pairs of seen entities — a caveat that applies to low-dim-causal-interface claims generally.
 
 ## 6. Where this project fits / open gaps
 
 The work is a **geometric + causal test of the persona-abstraction / persona-selection picture**:
 Exp 1 tests the clean-linear-abstraction claim (persona ≠ word), Exp 2 the reachable/controllable
-structure (steering-subspace + cone work), Exp 3 whether control is low-dimensional and *distinct*
-from representation (DAS).
+structure (steering-subspace + cone work), Exp 3 whether persona *control* is low-dimensional via
+DAS — where the **persona-disjoint re-test overturned the within-set "compact panel"** finding (no
+low-dim generalizing interface; a negative result that itself sharpens the literature's low-dim-causal
+claims).
 
 Clearest gap we fill: persona-vector work typically studies a handful of traits on one model. We do
 **pool-scale geometry (220 traits) + a head-to-head cross-model comparison** and find a
@@ -160,4 +169,8 @@ persona. The Assistant Axis paper independently reports model-dependent dimensio
 the **causal steerability link** (dimensionality → reachability) and the **promptable-but-not-
 steerable** gap. No prior work found doing this specific cross-model geometric-steerability
 comparison — likely our novel contribution, and a direct test of PSM's "representations reuse
-persona models" prediction showing it is **architecture-dependent**.
+persona models" prediction showing it is **architecture-dependent**. The DAS extension adds a
+second cross-model result: under a persona-disjoint test, a *shared* low-dim causal subspace
+**transfers consistently in Llama but only erratically in Qwen** — so even where a low-dim interface
+exists it is architecture-dependent, and the popular "compact causal panel" framing does not survive
+held-out personas in either model.

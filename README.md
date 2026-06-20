@@ -103,20 +103,32 @@ from the persona representation itself?
   low-dimensional subspace *suffices*.
 - **DAS interchange (8c–8g).** The single last-prompt-token site is too weak (the response
   re-attends to the persona's system prompt); the **all-positions residual-stream site** is the
-  real interface. Learning a *k*-dim projector `P` and swapping `P·(Vc[B]−Vc[A])` at that site
-  converts persona A→B. Measured by **judge-free held-out cross-entropy** of B's responses
-  (multi-seed), the learned subspace plateaus at **k ≈ 5–6** — the **panel dimension** — while
-  **random subspaces fail at every k up to 12**. All three DAS controls hold: random-subspace
-  baseline fails, the site is the residual stream, and **(8h)** the subspace is demonstrably
-  *used* on clean unintervened runs (100% leave-one-out persona ID from its coordinates).
-- **A distinct interface, not the persona vector (8i–8j).** The injected lever keeps only **~17%**
-  of the persona difference (vs **68%** for a variance-optimal PCA-6) yet controls behavior
-  *better* than the full vector — and this holds when the persona representation spans **31
-  dimensions** (32 personas). So the causal interface is genuinely narrow and **distinct from the
-  directions personas vary along** — you cannot recover it from PCA of the persona vectors.
+  real interface. Learning a *k*-dim projector `P` and additively swapping `P·(Vc[B]−Vc[A])` at
+  that site converts persona A→B, measured by **judge-free held-out cross-entropy** of B's
+  responses. *Holding out pairs of the same personas*, the learned subspace appears to plateau at
+  **k ≈ 5–6** while random subspaces fail — the within-set "panel dimension."
+- **⚠️ Generalization correction (persona-disjoint test).** That within-set plateau is largely
+  **memorization**: with only ~8–12 personas (a ≈7–11-dimensional span), a *k* ≳ 7 subspace can
+  absorb the whole span, so held-out *pairs* of *already-seen* personas transfer trivially.
+  Re-running with a **persona-disjoint split — train `P` on one persona set, measure CE on a
+  *disjoint* set of personas the projector never saw** (3 random splits each for Qwen & Llama;
+  `experiments/exp3_das.py`) **removes the compact panel: neither model shows a low-*k* plateau on
+  unseen personas.** Both climb gradually with *k*, recovering only **~0.4–0.6 of the
+  full-difference effect even at k = 24**. The robust cross-model signal is *consistency*: **Llama
+  generalizes more and far more stably** (k=24: **0.58 ± 0.03** across splits) than **Qwen**
+  (**0.41 ± 0.21**, strongly split-dependent). The full-difference (`P=I`) interchange transfers in
+  *every* split for both models, so the gap is specifically about whether a *learned low-dim*
+  subspace is **shared vs persona-specific**.
+- **A distinct interface, not the persona vector (8i–8j).** A within-set-trained *k*=6 lever keeps
+  only **~11–17%** of the persona difference (vs **40–68%** for a variance-optimal PCA-6) yet still
+  swaps persona — so the causal directions are not the variance directions. (Geometric measure on
+  the trained subspace; read alongside the generalization caveat above.)
 
-**Headline:** Qwen controls persona through a *structured ~5–6 dimensional causal interface that
-is distinct from the persona representation* — found causally (via DAS), not by variance.
+**Headline (revised):** The original *"structured ~5–6-dim causal panel"* was a **within-set
+artifact**. Under a persona-disjoint test there is **no compact persona-general causal interface** —
+persona control is high-dimensional on held-out personas. A shared low-dim subspace transfers
+**consistently in Llama** but only **erratically in Qwen** — the one robust cross-model signal.
+(Cross-model runs: `experiments/`; see also `docs/literature.md`.)
 
 ---
 
@@ -129,7 +141,8 @@ is distinct from the persona representation* — found causally (via DAS), not b
   - **Section 7:** Experiments 1 & 2 — contamination, word-vs-persona decomposition,
     gap-steering, and the coherent-reachable boundary map (incl. 3D).
   - **Section 8:** Experiment 3 — projected-steering sufficiency (Phase 1) and the DAS
-    interchange measuring the low-dimensional, distinct persona causal interface.
+    interchange. Note the within-set k≈5–6 "panel" does **not** survive a persona-disjoint test
+    (`experiments/exp3_das.py`); see the Experiment-3 generalization correction above.
 - **`contrastive_extraction.ipynb`** — archived Sections 4–5 (contrastive persona-vector
   extraction + PCA "Assistant Axis"), superseded by Section 6's positive-only PCA. Run the main
   notebook's setup→core cells first in the same kernel.
