@@ -119,6 +119,12 @@ from the persona representation itself?
   (**0.41 ± 0.21**, strongly split-dependent). The full-difference (`P=I`) interchange transfers in
   *every* split for both models, so the gap is specifically about whether a *learned low-dim*
   subspace is **shared vs persona-specific**.
+- **How high-dimensional is it? (bisect, `--bisect`).** Binary-searching *k* for the smallest
+  subspace that recovers **90%** of the full-difference effect on *unseen* personas:
+  **Llama k\* ≈ 1420–1540** (~**37%** of its 4096-dim residual stream, stable across splits);
+  **Qwen k\* ≈ 615–1340** (~**17–37%** of 3584, again wildly split-dependent). Not 5–6 dims, not
+  dozens — **hundreds-to-thousands**. (These k\* are read off a noisy, only-roughly-monotone CE
+  curve, so treat as order-of-magnitude.)
 - **A distinct interface, not the persona vector (8i–8j).** A within-set-trained *k*=6 lever keeps
   only **~11–17%** of the persona difference (vs **40–68%** for a variance-optimal PCA-6) yet still
   swaps persona — so the causal directions are not the variance directions. (Geometric measure on
@@ -126,7 +132,8 @@ from the persona representation itself?
 
 **Headline (revised):** The original *"structured ~5–6-dim causal panel"* was a **within-set
 artifact**. Under a persona-disjoint test there is **no compact persona-general causal interface** —
-persona control is high-dimensional on held-out personas. A shared low-dim subspace transfers
+generalizing persona control needs a subspace **~⅓ of the residual stream** (Llama k\* ≈ 1500;
+Qwen ≈ 600–1300), i.e. it is essentially high-dimensional. A shared low-dim subspace transfers
 **consistently in Llama** but only **erratically in Qwen** — the one robust cross-model signal.
 (Cross-model runs: `experiments/`; see also `docs/literature.md`.)
 

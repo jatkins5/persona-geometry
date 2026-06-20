@@ -65,6 +65,11 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--eps", type=float, default=1e-4)
     ap.add_argument("--panel-only", action="store_true",
                     help="run only the 8g panel-dimension sweep (skip 8h/8j); for fast k-sweeps")
+    ap.add_argument("--bisect", action="store_true",
+                    help="binary-search the smallest k that recovers --bisect-target of the "
+                         "full-difference (P=I) effect on the DISJOINT test personas")
+    ap.add_argument("--bisect-target", type=float, default=0.9,
+                    help="target fraction of the full-difference effect for --bisect (default 0.9)")
     ap.add_argument("--out-dir", type=Path, default=None)
     return ap.parse_args()
 
@@ -191,6 +196,56 @@ def panel_dimension(E: Exp3, train_personas, test_personas, n_test_pairs, k_list
         out["random_mean"].append(float(np.mean(randoms)))
         print(f"  {k:>3} | {np.mean(learned):8.3f} +/- {np.std(learned):.3f}        | {np.mean(randoms):8.3f}")
     return out
+
+
+def bisect_dimension(E: Exp3, train_personas, test_personas, n_test_pairs, target, k_max,
+                     seeds, steps, lr, coeff, eps) -> dict:
+    """Binary-search the smallest k whose learned subspace recovers `target` of the full-difference
+    (P=I) effect on the DISJOINT test personas. Held-out CE is (assumed) monotone decreasing in k;
+    the full trajectory is printed so non-monotone noise near the boundary is visible. f(k_max)=P=I
+    by construction (a full-rank projector is the identity), so the target is always reachable."""
+    d_model = E.Vc.shape[1]
+    train_pairs = [(a, b) for a in train_personas for b in train_personas if a != b]
+    test_all = [(a, b) for a in test_personas for b in test_personas if a != b]
+    stride = max(1, len(test_all) // n_test_pairs)
+    test_pairs = test_all[::stride][:n_test_pairs]
+    diff_train = {p: E.diff(*p) for p in train_pairs}
+    diff_test = {p: E.diff(*p) for p in test_pairs}
+    order = [(p, q) for p in train_pairs for q in E.questions]
+
+    eye = t.eye(d_model, device=E.dev)
+    ceil = E.heldout_ce(eye, test_pairs, diff_test, coeff)
+    no_int = E.heldout_ce(t.zeros(d_model, d_model, device=E.dev), test_pairs, diff_test, coeff)
+    target_ce = no_int - target * (no_int - ceil)
+    print(f"\nbisect: no-intervention CE {no_int:.3f}  full-difference (P=I) CE {ceil:.3f}")
+    print(f"  target = {target:.0%} of effect  ->  CE <= {target_ce:.3f}   (k in [1, {k_max}])")
+
+    cache = {}
+
+    def recovered_ce(k):
+        if k not in cache:
+            ces = [E.heldout_ce(E.train_subspace(k, s, steps, lr, coeff, order, diff_train),
+                                test_pairs, diff_test, coeff) for s in seeds]
+            cache[k] = float(np.mean(ces))
+            rec = (no_int - cache[k]) / (no_int - ceil) if no_int > ceil else float("nan")
+            print(f"  probe k={k:>5}  CE {cache[k]:.3f}  recovered {rec:+.0%}")
+        return cache[k]
+
+    lo, hi = 1, k_max
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if recovered_ce(mid) <= target_ce:
+            hi = mid
+        else:
+            lo = mid + 1
+    final_rec = (no_int - cache.get(lo, recovered_ce(lo))) / (no_int - ceil)
+    print(f"\n=> smallest k reaching {target:.0%} of the full-difference effect on UNSEEN personas: "
+          f"k = {lo}  (recovered {final_rec:+.0%}, CE {cache[lo]:.3f})")
+    return {"target": target, "no_intervention": no_int, "full_diff_ce": ceil, "target_ce": target_ce,
+            "k_max": k_max, "k_star": lo, "k_star_recovered": float(final_rec),
+            "probes": {str(k): v for k, v in sorted(cache.items())},
+            "n_train_personas": len(train_personas), "n_test_personas": len(test_personas),
+            "n_test_pairs": len(test_pairs)}
 
 
 def clean_run_control(E: Exp3, personas, panel_k, steps, lr, coeff, eps) -> dict:
@@ -359,6 +414,21 @@ def main() -> None:
     print(f"device={device}  model={cfg.key}  site=layer {cfg.steer_layer}  split_seed={args.split_seed}")
     print(f"  train personas ({len(train_personas)}): {', '.join(train_personas)}")
     print(f"  test  personas ({len(test_personas)}): {', '.join(test_personas)}")
+
+    if args.bisect:
+        bres = bisect_dimension(E, train_personas, test_personas, args.n_test_pairs,
+                                args.bisect_target, Vc.shape[1], seeds, args.steps, args.lr,
+                                args.coeff, args.eps)
+        out = {"params": {"experiment": "exp3_das_bisect", "model_key": cfg.key, "model": cfg.hf_id,
+                          "timestamp_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                          "das_layer": cfg.steer_layer, "n_train": args.n_train, "n_test": args.n_test,
+                          "n_test_pairs": args.n_test_pairs, "split_seed": args.split_seed,
+                          "seeds": seeds, "steps": args.steps, "coeff": args.coeff,
+                          "train_personas": train_personas, "test_personas": test_personas},
+               "bisect": bres}
+        (out_dir / "exp3_bisect.json").write_text(json.dumps(out, indent=2))
+        print(f"\ndone -> {out_dir}  (k* = {bres['k_star']} for {args.bisect_target:.0%})")
+        return
 
     panel = panel_dimension(E, train_personas, test_personas, args.n_test_pairs, k_list, seeds,
                             args.steps, args.lr, args.coeff, args.eps)
