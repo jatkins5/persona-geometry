@@ -140,26 +140,32 @@ This project: **Qwen2.5-7B-Instruct (layer 20)** and **Llama-3.1-8B-Instruct (la
 | Cross-model | — | PC1 >0.92 correlated; PC2-3 diverge | Llama ~2× higher-dim than Qwen |
 | Steering / monitoring | proj. monitoring r=0.75–0.83; finetune-shift r=0.76–0.97 | — | **steering reaches only 62% (Llama) / 86% (Qwen) of a persona's own location before coherence breaks** |
 | Lexical vs behavioral | — | — | persona ≈ **90–93% behavioral residual, ~7–10% lexical**; lexical content not frequency-driven |
-| DAS causal control (within-set) | — | clamp along Assistant Axis | apparent panel **k ≈ 5–6** |
-| DAS — **persona-disjoint** (Exp 3) | — | — | **no compact panel; ~0.4–0.6 of effect recovered at k=24 on unseen personas; Llama 0.58±0.03 ≫ Qwen 0.41±0.21 stability** |
+| DAS causal control (within-set) | — | clamp along Assistant Axis | apparent panel **k ≈ 5–6** (memorization) |
+| DAS — persona-disjoint, N=12 train | — | — | looks ~10²–10³-dim, but data-starved |
+| DAS — **panel emerges with training data** (Exp 3) | — | — | at N=100 train personas a compact panel appears on *unseen* personas: **Qwen k≈8 (94%), Llama k≈16 (80%)** |
 
 Adjacent low-dim-control result: the OpenAI EM paper finds essentially **one** dominant controlling
-persona feature, and our *within-set* DAS suggested a ~5–6-dim interface — but our **persona-disjoint**
-re-test (train `P` on one persona set, evaluate CE on a disjoint set) **removed the compact panel**:
-on *unseen* personas neither model has a low-dimensional generalizing interface (the within-set
-plateau was largely memorization of the training personas, whose ~7–11-dim span a k≳7 subspace can
-absorb). A shared low-dim subspace transfers *consistently* in Llama but only *erratically* in Qwen.
-**Methodological lesson:** interchange/DAS panel claims need held-out **entities**, not just held-out
-pairs of seen entities — a caveat that applies to low-dim-causal-interface claims generally.
+persona feature. Our DAS panel dimension turned out to depend critically on the *number of training
+personas*: within-set (memorization) gave ~5–6; a persona-disjoint test at only 12 training personas
+looked ~10²–10³-dim (the shared subspace is underdetermined with so few personas); but training on
+**100 personas** and evaluating on *unseen* ones reveals a genuinely **compact interface — Qwen ≈ 8,
+Llama ≈ 16 dims** (≫ random baseline). So a low-dim causal panel *does* exist, matching the
+representation geometry (Qwen more compact than Llama). **Open control:** whether that emergent D is
+*distinct* from the persona representation or merely its top-*k* PCA directions (`--persona-space-check`).
+**Methodological lesson:** interchange/DAS panel-dimension claims need (a) held-out **entities**, not
+just held-out pairs of seen entities, and (b) **enough training entities** — a small entity set makes
+a real low-dim interface look high-dimensional. Both caveats apply to low-dim-causal-interface claims
+generally.
 
 ## 6. Where this project fits / open gaps
 
 The work is a **geometric + causal test of the persona-abstraction / persona-selection picture**:
 Exp 1 tests the clean-linear-abstraction claim (persona ≠ word), Exp 2 the reachable/controllable
 structure (steering-subspace + cone work), Exp 3 whether persona *control* is low-dimensional via
-DAS — where the **persona-disjoint re-test overturned the within-set "compact panel"** finding (no
-low-dim generalizing interface; a negative result that itself sharpens the literature's low-dim-causal
-claims).
+DAS — where the panel dimension proved to be a **function of the number of training personas**:
+within-set memorization (~5–6) → data-starved disjoint (~10²–10³) → a compact interface that
+**emerges with enough training personas** (Qwen ≈ 8, Llama ≈ 16 on unseen personas), with the
+distinct-from-persona-space control still running.
 
 Clearest gap we fill: persona-vector work typically studies a handful of traits on one model. We do
 **pool-scale geometry (220 traits) + a head-to-head cross-model comparison** and find a

@@ -119,22 +119,35 @@ from the persona representation itself?
   (**0.41 ± 0.21**, strongly split-dependent). The full-difference (`P=I`) interchange transfers in
   *every* split for both models, so the gap is specifically about whether a *learned low-dim*
   subspace is **shared vs persona-specific**.
-- **How high-dimensional is it? (bisect, `--bisect`).** Binary-searching *k* for the smallest
-  subspace that recovers **90%** of the full-difference effect on *unseen* personas:
-  **Llama k\* ≈ 1420–1540** (~**37%** of its 4096-dim residual stream, stable across splits);
-  **Qwen k\* ≈ 615–1340** (~**17–37%** of 3584, again wildly split-dependent). Not 5–6 dims, not
-  dozens — **hundreds-to-thousands**. (These k\* are read off a noisy, only-roughly-monotone CE
-  curve, so treat as order-of-magnitude.)
-- **A distinct interface, not the persona vector (8i–8j).** A within-set-trained *k*=6 lever keeps
-  only **~11–17%** of the persona difference (vs **40–68%** for a variance-optimal PCA-6) yet still
-  swaps persona — so the causal directions are not the variance directions. (Geometric measure on
-  the trained subspace; read alongside the generalization caveat above.)
+  At the *data-starved* N=12 regime this looks essentially high-dimensional: binary-searching *k*
+  (`--bisect`) for 90% recovery on unseen personas gives **Llama k\* ≈ 1420–1540** and **Qwen
+  k\* ≈ 615–1340** — hundreds-to-thousands of dims. But that turns out to be a **sample-size
+  artifact** (next bullet), not the true interface dimension.
+- **✅ The compact panel is real — it just needs enough training personas (`--train-size-sweep`).**
+  Sweeping the *training* persona count {12, 25, 50, 100, 150} against a **fixed disjoint test set**,
+  low-*k* generalization rises sharply with data and a **knee emerges**. At **N=100 training
+  personas** the learned subspace recovers, on *unseen* personas (random-subspace baseline ≈ 0 at
+  low *k*, so this is real structure):
+  - **Qwen — sharp knee at k ≈ 8:** k4 **85%**, **k8 94%**, k16 96%.
+  - **Llama — softer knee at k ≈ 16:** k8 73%, **k16 80%**, k32 84%.
 
-**Headline (revised):** The original *"structured ~5–6-dim causal panel"* was a **within-set
-artifact**. Under a persona-disjoint test there is **no compact persona-general causal interface** —
-generalizing persona control needs a subspace **~⅓ of the residual stream** (Llama k\* ≈ 1500;
-Qwen ≈ 600–1300), i.e. it is essentially high-dimensional. A shared low-dim subspace transfers
-**consistently in Llama** but only **erratically in Qwen** — the one robust cross-model signal.
+  So persona control **is** mediated by a compact causal interface (**Qwen ≈ 8 dims, Llama ≈ 16**) —
+  but *identifying* it needs many training personas; with few, DAS can't find the shared subspace
+  and it looks spuriously high-dimensional (a methodological caution for interchange work). The
+  cross-model ordering now matches the geometry: **Qwen's interface is more compact than Llama's**,
+  consistent with Qwen's lower-dimensional persona space (PC1 47% / PR 4 vs 29% / 9).
+- **Open question — is the panel *distinct* from persona space? (under test).** Since every
+  `Vc[B]−Vc[A]` lies in persona space by construction, we must check the emergent D is not merely the
+  **top-*k* PCA of the persona vectors** (which would make DAS a restatement of the representation,
+  not a distinct interface). Comparing learned-D vs PCA-*k* vs random on held-out recovery, plus how
+  much of D lies inside the persona span. *(Analysis in progress; `--persona-space-check`.)*
+
+**Headline (current):** The story went **within-set k≈5–6 (memorization)** → **persona-disjoint at
+N=12 (looks ~10²–10³-dim — but data-starved)** → **persona-disjoint scaling training personas: a
+compact panel *emerges and sharpens*, Qwen ≈ 8 dims, Llama ≈ 16, generalizing to unseen personas.**
+So persona control does run through a low-dimensional causal interface, but one that only reveals
+itself with enough training personas — and whether it is genuinely *distinct* from the persona
+representation (vs its top PCA directions) is the open control being run now.
 (Cross-model runs: `experiments/`; see also `docs/literature.md`.)
 
 ---
