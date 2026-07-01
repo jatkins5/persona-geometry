@@ -78,6 +78,9 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--steps-per-n", type=int, default=40,
                     help="train-size sweep: SGD steps = min(steps_cap, steps_per_n * N_train)")
     ap.add_argument("--steps-cap", type=int, default=3000)
+    ap.add_argument("--persona-space-check", action="store_true",
+                    help="is the learned panel distinct from persona space, or just its top-k PCA? "
+                         "Compares learned-D vs PCA-k(persona) vs random on held-out recovery + overlaps")
     ap.add_argument("--out-dir", type=Path, default=None)
     return ap.parse_args()
 
@@ -312,6 +315,105 @@ def train_size_sweep(E: Exp3, test_personas, train_pool, train_sizes, k_list, n_
     return out
 
 
+def persona_space_check(E, train_personas, test_personas, k_list, n_test_pairs, seeds,
+                        steps, lr, coeff, eps) -> dict:
+    """Is the emergent panel a DISTINCT causal interface, or just the persona representation's own
+    top-k directions? Every Vc[B]-Vc[A] lives in persona space, so if the learned D equals the top-k
+    PCA of persona space, DAS added nothing beyond PCA of the persona vectors. We compare, on a
+    disjoint test set: learned-D vs PCA-k(persona space) vs random-k -- both in held-out recovery
+    (behaviour) and geometry (how much of D lies in the persona span; how aligned D is with PCA-k)."""
+    d_model = E.Vc.shape[1]
+    test_all = [(a, b) for a in test_personas for b in test_personas if a != b]
+    stride = max(1, len(test_all) // n_test_pairs)
+    test_pairs = test_all[::stride][:n_test_pairs]
+    diff_test = {p: E.diff(*p) for p in test_pairs}
+    train_pairs = [(a, b) for a in train_personas for b in train_personas if a != b]
+    order = [(p, q) for p in train_pairs for q in E.questions]
+    diff_train = {p: E.diff(*p) for p in train_pairs}
+
+    # persona space = span of ALL centered persona vectors; its SVD gives the PCA directions and a
+    # basis for "how much of a subspace lies in persona space".
+    Vc_all = E.Vc.float()                                              # (N_all, d), already centered
+    Up, Sp, Vpt = t.linalg.svd(Vc_all - Vc_all.mean(0), full_matrices=False)
+    persona_rank = int((Sp > 1e-3 * Sp[0]).sum())
+    B_persona = Vpt[:persona_rank].to(E.dev)                           # (r, d) orthonormal rows spanning persona space
+    pca_dirs = Vpt.to(E.dev)                                           # top rows = top variance directions
+
+    eye = t.eye(d_model, device=E.dev)
+    ceil = E.heldout_ce(eye, test_pairs, diff_test, coeff)
+    no_int = E.heldout_ce(t.zeros(d_model, d_model, device=E.dev), test_pairs, diff_test, coeff)
+    rec = lambda ce: (no_int - ce) / (no_int - ceil) if no_int > ceil else float("nan")
+
+    def subspace_basis(P):
+        """Orthonormal basis (k, d) of colspace of projector P via its top eigenvectors."""
+        w, v = t.linalg.eigh(P)                                        # P symmetric; eigenvalues ~{0,1}
+        k = int(t.round(w.sum()).item())
+        return v[:, -k:].T.contiguous()                               # (k, d)
+
+    def in_persona_frac(P):
+        """Mean fraction of the learned subspace's energy lying in persona space (1 = fully inside)."""
+        Bd = subspace_basis(P)                                        # (k, d)
+        proj = Bd @ B_persona.T                                       # (k, r)
+        return float(proj.pow(2).sum(1).mean())
+
+    print(f"\npersona-space check: train {len(train_personas)} / test {len(test_personas)} disjoint; "
+          f"persona-space rank {persona_rank} in d={d_model}")
+    print(f"  no-int CE {no_int:.3f}  full-diff CE {ceil:.3f}")
+    print(f"  {'k':>4} | {'learned':>8} {'PCA-k':>8} {'random':>8} | "
+          f"{'D-in-persona':>12} {'PCAk-in-persona':>15} {'cos^2(D,PCAk)':>13}")
+    out = {"k": k_list, "no_intervention": no_int, "full_diff_ce": ceil, "persona_rank": persona_rank,
+           "learned_rec": [], "pca_rec": [], "random_rec": [],
+           "d_in_persona": [], "pcak_in_persona": [], "align_d_pca": []}
+    for k in k_list:
+        P_learned = E.train_subspace(k, seeds[0], steps, lr, coeff, order, diff_train)
+        C = pca_dirs[:k]                                              # top-k persona PCA directions
+        P_pca = C.T @ C
+        t.manual_seed(700 + k)
+        P_rand = projector(t.randn(d_model, k, device=E.dev), eps).detach()
+
+        lr_ = rec(E.heldout_ce(P_learned, test_pairs, diff_test, coeff))
+        pr_ = rec(E.heldout_ce(P_pca, test_pairs, diff_test, coeff))
+        rr_ = rec(E.heldout_ce(P_rand, test_pairs, diff_test, coeff))
+        dip = in_persona_frac(P_learned)
+        pcip = in_persona_frac(P_pca)                                # ~1 by construction (sanity)
+        # alignment of learned D with the top-k PCA subspace (1 = identical subspace)
+        Bd = subspace_basis(P_learned)
+        align = float((Bd @ C.T).pow(2).sum() / k)
+        for key, val in [("learned_rec", lr_), ("pca_rec", pr_), ("random_rec", rr_),
+                         ("d_in_persona", dip), ("pcak_in_persona", pcip), ("align_d_pca", align)]:
+            out[key].append(val)
+        print(f"  {k:>4} | {lr_:8.0%} {pr_:8.0%} {rr_:8.0%} | {dip:12.0%} {pcip:15.0%} {align:13.0%}")
+
+    print("\nRead: if learned ~ PCA-k and D-in-persona ~ 100% and cos^2(D,PCAk) ~ 100% -> the panel is")
+    print("just the persona variance subspace (DAS found nothing beyond PCA). If learned >> PCA-k or")
+    print("D sits partly outside persona space / rotated from PCA-k -> a genuinely distinct interface.")
+    return out
+
+
+def plot_persona_space_check(res, out_dir, model_key):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    k = np.array(res["k"])
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5.5))
+    ax1.plot(k, res["learned_rec"], "-o", lw=2, color="#1f77b4", label="learned DAS D")
+    ax1.plot(k, res["pca_rec"], "-s", lw=2, color="#ff7f0e", label="PCA-k of persona space")
+    ax1.plot(k, res["random_rec"], ":^", lw=1.5, color="grey", label="random subspace")
+    ax1.axhline(1.0, ls="--", color="k", lw=0.8, alpha=0.5)
+    ax1.set_xscale("log", base=2); ax1.set_xlabel("subspace dimension k")
+    ax1.set_ylabel("fraction of full-difference effect recovered")
+    ax1.set_title("Behaviour: does DAS beat PCA of the persona vectors?"); ax1.legend()
+    ax2.plot(k, res["d_in_persona"], "-o", lw=2, color="#1f77b4", label="learned D in persona span")
+    ax2.plot(k, res["align_d_pca"], "-o", lw=2, color="#d62728", label="cos²(learned D, PCA-k)")
+    ax2.axhline(1.0, ls="--", color="k", lw=0.8, alpha=0.5)
+    ax2.set_xscale("log", base=2); ax2.set_ylim(0, 1.05); ax2.set_xlabel("subspace dimension k")
+    ax2.set_ylabel("fraction"); ax2.set_title("Geometry: is D just the persona subspace / its PCA?")
+    ax2.legend()
+    fig.suptitle(f"Exp 3 ({model_key}): is the emergent panel distinct from persona space?")
+    fig.tight_layout(); fig.savefig(out_dir / "persona_space_check.png", dpi=140)
+    print(f"saved -> {out_dir / 'persona_space_check.png'}")
+
+
 def plot_train_size_sweep(res, out_dir, model_key):
     import matplotlib
     matplotlib.use("Agg")
@@ -486,7 +588,7 @@ def main() -> None:
     E = Exp3(model, tokenizer, cfg, Vc, centroid, pca, names, systems, responses,
              questions, args.resp_tokens, args.eps)
 
-    if args.train_size_sweep:
+    if args.train_size_sweep or args.persona_space_check:
         # fixed disjoint test set + a shuffled candidate pool to draw nested training sets from
         import random as _random
         train_sizes = [int(x) for x in args.train_sizes.split(",")]
@@ -497,6 +599,23 @@ def main() -> None:
         test_personas, train_pool = cand[: args.n_test], cand[args.n_test:]
         print(f"device={device}  model={cfg.key}  site=layer {cfg.steer_layer}  "
               f"candidate pool {len(cand)}  test {len(test_personas)}  train pool {len(train_pool)}")
+
+    if args.persona_space_check:
+        # use the largest training size as the "identified" panel regime
+        n_train = max(train_sizes)
+        steps = min(args.steps_cap, args.steps_per_n * n_train)
+        res = persona_space_check(E, train_pool[:n_train], test_personas, k_list, args.n_test_pairs,
+                                  seeds, steps, args.lr, args.coeff, args.eps)
+        res["params"] = {"experiment": "exp3_das_persona_space_check", "model_key": cfg.key,
+                         "model": cfg.hf_id, "n_train": n_train, "steps": steps,
+                         "timestamp_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                         "n_test": args.n_test, "split_seed": args.split_seed}
+        (out_dir / "exp3_persona_space_check.json").write_text(json.dumps(res, indent=2))
+        plot_persona_space_check(res, out_dir, cfg.key)
+        print(f"\ndone -> {out_dir}")
+        return
+
+    if args.train_size_sweep:
         res = train_size_sweep(E, test_personas, train_pool, train_sizes, k_list, args.n_test_pairs,
                                seeds, args.steps_per_n, args.steps_cap, args.lr, args.coeff, args.eps)
         res["params"] = {"experiment": "exp3_das_train_size_sweep", "model_key": cfg.key,
