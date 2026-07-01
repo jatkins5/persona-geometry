@@ -70,6 +70,14 @@ def parse_args() -> argparse.Namespace:
                          "full-difference (P=I) effect on the DISJOINT test personas")
     ap.add_argument("--bisect-target", type=float, default=0.9,
                     help="target fraction of the full-difference effect for --bisect (default 0.9)")
+    ap.add_argument("--train-size-sweep", action="store_true",
+                    help="sweep the TRAINING persona count (--train-sizes), holding a fixed disjoint "
+                         "test set, to see whether a stable panel dimension emerges with more data")
+    ap.add_argument("--train-sizes", default="12,25,50,100",
+                    help="nested training-set sizes to sweep (drawn from a shuffled candidate pool)")
+    ap.add_argument("--steps-per-n", type=int, default=40,
+                    help="train-size sweep: SGD steps = min(steps_cap, steps_per_n * N_train)")
+    ap.add_argument("--steps-cap", type=int, default=3000)
     ap.add_argument("--out-dir", type=Path, default=None)
     return ap.parse_args()
 
@@ -248,6 +256,84 @@ def bisect_dimension(E: Exp3, train_personas, test_personas, n_test_pairs, targe
             "n_test_pairs": len(test_pairs)}
 
 
+def train_size_sweep(E: Exp3, test_personas, train_pool, train_sizes, k_list, n_test_pairs,
+                     seeds, steps_per_n, steps_cap, lr, coeff, eps) -> dict:
+    """Sweep the TRAINING persona count on a FIXED disjoint test set. If persona control has a
+    shared low-dim interface, more training personas should make the learned subspace generalize
+    at a stable low k (a knee that firms up as N grows); if control is genuinely high-dimensional,
+    the recovered-vs-k curve just rises slowly regardless of N. Random-subspace baseline (independent
+    of N) is computed once per k for comparison. Training-set sizes are NESTED so each larger set
+    adds personas to the previous."""
+    d_model = E.Vc.shape[1]
+    test_all = [(a, b) for a in test_personas for b in test_personas if a != b]
+    stride = max(1, len(test_all) // n_test_pairs)
+    test_pairs = test_all[::stride][:n_test_pairs]
+    diff_test = {p: E.diff(*p) for p in test_pairs}
+
+    eye = t.eye(d_model, device=E.dev)
+    ceil = E.heldout_ce(eye, test_pairs, diff_test, coeff)
+    no_int = E.heldout_ce(t.zeros(d_model, d_model, device=E.dev), test_pairs, diff_test, coeff)
+    rec = lambda ce: (no_int - ce) / (no_int - ceil) if no_int > ceil else float("nan")
+    print(f"\ntrain-size sweep: fixed disjoint test = {len(test_personas)} personas "
+          f"({len(test_pairs)} pairs)")
+    print(f"  no-intervention CE {no_int:.3f}   full-difference (P=I) CE {ceil:.3f}")
+
+    # random-subspace baseline: recovered fraction per k, independent of the training set
+    random_rec = []
+    for k in k_list:
+        rr = []
+        for s in seeds:
+            t.manual_seed(700 + s)
+            rr.append(E.heldout_ce(projector(t.randn(d_model, k, device=E.dev), eps).detach(),
+                                   test_pairs, diff_test, coeff))
+        random_rec.append(float(rec(float(np.mean(rr)))))
+    print("  random baseline recovered: "
+          + "  ".join(f"k{k}={r:+.0%}" for k, r in zip(k_list, random_rec)))
+
+    out = {"train_sizes": train_sizes, "k": k_list, "no_intervention": no_int, "full_diff_ce": ceil,
+           "random_recovered": random_rec, "learned": {}, "learned_sd": {}}
+    for N in train_sizes:
+        train_personas = train_pool[:N]                                   # nested growing set
+        train_pairs = [(a, b) for a in train_personas for b in train_personas if a != b]
+        order = [(p, q) for p in train_pairs for q in E.questions]
+        diff_train = {p: E.diff(*p) for p in train_pairs}
+        steps = min(steps_cap, steps_per_n * N)
+        print(f"\n  N={N} train personas ({len(train_pairs)} pairs), {steps} steps:")
+        recs, sds = [], []
+        for k in k_list:
+            ces = [E.heldout_ce(E.train_subspace(k, s, steps, lr, coeff, order, diff_train),
+                                test_pairs, diff_test, coeff) for s in seeds]
+            recs.append(float(rec(float(np.mean(ces)))))
+            sds.append(float(np.std([rec(c) for c in ces])))
+            print(f"    k={k:>4}  recovered {recs[-1]:+.0%} +/- {sds[-1]:.0%}  "
+                  f"(random {random_rec[k_list.index(k)]:+.0%})")
+        out["learned"][str(N)] = recs
+        out["learned_sd"][str(N)] = sds
+    return out
+
+
+def plot_train_size_sweep(res, out_dir, model_key):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    k = np.array(res["k"])
+    fig, ax = plt.subplots(figsize=(8.5, 6))
+    cmap = plt.cm.viridis(np.linspace(0.15, 0.85, len(res["train_sizes"])))
+    for N, c in zip(res["train_sizes"], cmap):
+        y = np.array(res["learned"][str(N)]); sd = np.array(res["learned_sd"][str(N)])
+        ax.plot(k, y, "-o", lw=2, color=c, label=f"train N={N}")
+        ax.fill_between(k, y - sd, y + sd, color=c, alpha=0.12)
+    ax.plot(k, res["random_recovered"], "--s", color="grey", lw=1.5, label="random subspace")
+    ax.axhline(1.0, ls="--", color="k", lw=0.8, alpha=0.5)
+    ax.axhline(0, ls=":", color="grey", lw=0.8)
+    ax.set_xscale("log", base=2)
+    ax.set_xlabel("subspace dimension k"); ax.set_ylabel("fraction of full-difference effect recovered")
+    ax.set_title(f"Exp 3 ({model_key}): does a stable panel dimension emerge with more training personas?")
+    ax.legend()
+    fig.tight_layout(); fig.savefig(out_dir / "train_size_sweep.png", dpi=140)
+    print(f"saved -> {out_dir / 'train_size_sweep.png'}")
+
+
 def clean_run_control(E: Exp3, personas, panel_k, steps, lr, coeff, eps) -> dict:
     """8h: does clean-run between-persona variation live in the learned D? (variance + persona-ID)."""
     d_model = E.Vc.shape[1]
@@ -399,6 +485,32 @@ def main() -> None:
 
     E = Exp3(model, tokenizer, cfg, Vc, centroid, pca, names, systems, responses,
              questions, args.resp_tokens, args.eps)
+
+    if args.train_size_sweep:
+        # fixed disjoint test set + a shuffled candidate pool to draw nested training sets from
+        import random as _random
+        train_sizes = [int(x) for x in args.train_sizes.split(",")]
+        ranked = [names[i] for i in Vc.norm(dim=1).argsort(descending=True).tolist()]
+        need = max(train_sizes) + args.n_test
+        cand = ranked[: max(args.candidate_pool, need + 5)]
+        _random.Random(max(args.split_seed, 0)).shuffle(cand)
+        test_personas, train_pool = cand[: args.n_test], cand[args.n_test:]
+        print(f"device={device}  model={cfg.key}  site=layer {cfg.steer_layer}  "
+              f"candidate pool {len(cand)}  test {len(test_personas)}  train pool {len(train_pool)}")
+        res = train_size_sweep(E, test_personas, train_pool, train_sizes, k_list, args.n_test_pairs,
+                               seeds, args.steps_per_n, args.steps_cap, args.lr, args.coeff, args.eps)
+        res["params"] = {"experiment": "exp3_das_train_size_sweep", "model_key": cfg.key,
+                         "model": cfg.hf_id, "das_layer": cfg.steer_layer,
+                         "timestamp_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                         "n_test": args.n_test, "n_test_pairs": args.n_test_pairs, "seeds": seeds,
+                         "steps_per_n": args.steps_per_n, "steps_cap": args.steps_cap,
+                         "coeff": args.coeff, "split_seed": args.split_seed,
+                         "test_personas": test_personas}
+        (out_dir / "exp3_train_size_sweep.json").write_text(json.dumps(res, indent=2))
+        plot_train_size_sweep(res, out_dir, cfg.key)
+        print(f"\ndone -> {out_dir}")
+        return
+
     # disjoint train/test persona split, so the projector never sees the test personas' directions
     # -- a true generalization test of the shared causal subspace. --split-seed randomizes the
     # assignment within the strongest pool (removes the strong-vs-weak confound of the ranked split).

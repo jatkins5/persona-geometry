@@ -29,17 +29,19 @@ def parse_args():
 
 
 def load_group(dirs):
-    """Return (k, learned[ndirs,nk], recovered[ndirs,nk], no_int_mean, ceil_mean)."""
+    """Return (k, learned[ndirs,nk], recovered[ndirs,nk], rand_recovered[ndirs,nk], no_int, ceil)."""
     k = None
-    learned, recovered, no_ints, ceils = [], [], [], []
+    learned, recovered, rand_rec, no_ints, ceils = [], [], [], [], []
     for d in dirs:
         p = json.loads((Path(d) / "exp3_results.json").read_text())["panel_dimension"]
-        k = np.array(p["k"]); lm = np.array(p["learned_mean"])
+        k = np.array(p["k"]); lm = np.array(p["learned_mean"]); rm = np.array(p["random_mean"])
         no_int, ceil = p["no_intervention"], p["full_diff_ref"]
         learned.append(lm)
         recovered.append((no_int - lm) / (no_int - ceil))
+        rand_rec.append((no_int - rm) / (no_int - ceil))
         no_ints.append(no_int); ceils.append(ceil)
-    return k, np.array(learned), np.array(recovered), float(np.mean(no_ints)), float(np.mean(ceils))
+    return (k, np.array(learned), np.array(recovered), np.array(rand_rec),
+            float(np.mean(no_ints)), float(np.mean(ceils)))
 
 
 def main():
@@ -56,17 +58,21 @@ def main():
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5.5))
     colors = ["#1f77b4", "#d62728", "#2ca02c"]
     for (label, dirs), c in zip(groups, colors):
-        k, learned, recovered, no_int, ceil = load_group(dirs)
+        k, learned, recovered, rand_rec, no_int, ceil = load_group(dirs)
         n = len(dirs)
         lm, ls = learned.mean(0), learned.std(0)
         rm, rs = recovered.mean(0), recovered.std(0)
+        randm = rand_rec.mean(0)
         tag = f"{label} (n={n})" if n > 1 else label
+        print(f"{label}: recovered fraction on unseen personas (mean±std over {n} splits): "
+              + "  ".join(f"k{int(kk)}={m:+.2f}±{s:.2f}" for kk, m, s in zip(k, rm, rs)))
         ax1.plot(k, lm, "-o", lw=2, color=c, label=tag)
         ax1.fill_between(k, lm - ls, lm + ls, color=c, alpha=0.15)
         ax1.axhline(no_int, ls=":", lw=1, color=c, alpha=0.5)
         ax1.axhline(ceil, ls="--", lw=1, color=c, alpha=0.6)
         ax2.plot(k, rm, "-o", lw=2, color=c, label=tag)
         ax2.fill_between(k, rm - rs, rm + rs, color=c, alpha=0.15)
+        ax2.plot(k, randm, ":", lw=1.3, color=c, alpha=0.7, label=f"{label} random")
 
     ax1.set_xlabel("subspace dimension k"); ax1.set_ylabel("held-out CE of B's responses")
     ax1.set_title("Raw interchange CE vs k  (dotted = no-interv., dashed = full-difference)")
