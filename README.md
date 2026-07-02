@@ -125,29 +125,32 @@ from the persona representation itself?
   artifact** (next bullet), not the true interface dimension.
 - **✅ The compact panel is real — it just needs enough training personas (`--train-size-sweep`).**
   Sweeping the *training* persona count {12, 25, 50, 100, 150} against a **fixed disjoint test set**,
-  low-*k* generalization rises sharply with data and a **knee emerges**. At **N=100 training
-  personas** the learned subspace recovers, on *unseen* personas (random-subspace baseline ≈ 0 at
-  low *k*, so this is real structure):
-  - **Qwen — sharp knee at k ≈ 8:** k4 **85%**, **k8 94%**, k16 96%.
-  - **Llama — softer knee at k ≈ 16:** k8 73%, **k16 80%**, k32 84%.
+  low-*k* generalization rises sharply with data and a **knee emerges** by k ≈ 8–16 (random-subspace
+  baseline ≈ 0 at low *k*, so this is real structure). At **N=100 training personas** both models
+  recover **~80% of the full-difference effect on *unseen* personas by k ≈ 8–16**, ~95% by k ≈ 32.
+  Qwen **saturates by N≈100** (N=150 adds nothing); Llama keeps tightening through N=150 (k16
+  87→94%). So persona control **is** mediated by a compact causal subspace whose identification just
+  requires many training personas — with few, DAS can't find it and it looks spuriously
+  high-dimensional (a methodological caution for interchange work). *(The exact knee value and any
+  Qwen-vs-Llama gap wander ~10–15 pts across random splits, so we don't claim one model's knee is
+  sharper.)*
+- **❌ The panel is NOT a distinct interface — it's just persona-space PCA (`--persona-space-check`,
+  3 splits/model).** Since every `Vc[B]−Vc[A]` lies in persona space, we compared the DAS-learned D
+  against the **top-*k* PCA of the persona vectors** on held-out recovery. Across 3 random splits the
+  **learned − PCA gap hovers around zero within noise for both models** (Qwen k8 +0.08 ± 0.09, Llama
+  k8 +0.04 ± 0.07; ~0 or negative elsewhere). A promising single-split "Qwen beats PCA by 12 pts"
+  **did not replicate**. So DAS finds *nothing better than the leading principal components of the
+  persona representation* — the causal control subspace **is** the persona-variance subspace, not a
+  separate lever. (The notebook's 8i/8j "distinct interface" claim does not survive held-out-persona
+  + multi-split testing.)
 
-  So persona control **is** mediated by a compact causal interface (**Qwen ≈ 8 dims, Llama ≈ 16**) —
-  but *identifying* it needs many training personas; with few, DAS can't find the shared subspace
-  and it looks spuriously high-dimensional (a methodological caution for interchange work). The
-  cross-model ordering now matches the geometry: **Qwen's interface is more compact than Llama's**,
-  consistent with Qwen's lower-dimensional persona space (PC1 47% / PR 4 vs 29% / 9).
-- **Open question — is the panel *distinct* from persona space? (under test).** Since every
-  `Vc[B]−Vc[A]` lies in persona space by construction, we must check the emergent D is not merely the
-  **top-*k* PCA of the persona vectors** (which would make DAS a restatement of the representation,
-  not a distinct interface). Comparing learned-D vs PCA-*k* vs random on held-out recovery, plus how
-  much of D lies inside the persona span. *(Analysis in progress; `--persona-space-check`.)*
-
-**Headline (current):** The story went **within-set k≈5–6 (memorization)** → **persona-disjoint at
-N=12 (looks ~10²–10³-dim — but data-starved)** → **persona-disjoint scaling training personas: a
-compact panel *emerges and sharpens*, Qwen ≈ 8 dims, Llama ≈ 16, generalizing to unseen personas.**
-So persona control does run through a low-dimensional causal interface, but one that only reveals
-itself with enough training personas — and whether it is genuinely *distinct* from the persona
-representation (vs its top PCA directions) is the open control being run now.
+**Headline (final):** The panel dimension was a moving target driven by evaluation rigor:
+**within-set k≈5–6 (memorization)** → **persona-disjoint at N=12 (looks ~10²–10³-dim — data-starved)**
+→ **scaling training personas: a compact subspace *emerges*, ~k 8–16, generalizing to unseen
+personas** → **but multi-split testing shows that subspace is *just the top-k PCA of the persona
+vectors*, not a distinct causal interface.** So persona control runs through a low-dimensional
+subspace that **coincides with the persona representation's own leading directions** — the interface
+and the representation are the *same* ~10-dim object, not distinct.
 (Cross-model runs: `experiments/`; see also `docs/literature.md`.)
 
 ---
