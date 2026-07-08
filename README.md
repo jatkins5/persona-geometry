@@ -10,6 +10,13 @@ geometry of the space they live in, and runs three experiments asking: are the p
 *clean abstractions*, what does the *reachable* persona space look like under steering, and is
 persona *controlled* through a low-dimensional causal interface.
 
+**Cross-model extension.** The original study (the `personas.ipynb` notebook) is Qwen-only. It was
+then re-run head-to-head on **Llama-3.1-8B-Instruct** via standalone, model-parameterized scripts in
+[`experiments/`](experiments/) — reusing the same 220-persona pool but re-extracting each model's own
+vectors. The cross-model results are woven into the three experiment sections below and summarized in
+[**Cross-model synthesis**](#cross-model-synthesis); every figure is indexed in [`FIGURES.md`](FIGURES.md),
+and the related-work map is in [`docs/literature.md`](docs/literature.md).
+
 ---
 
 ## The persona pool (Section 6)
@@ -79,6 +86,12 @@ results overlay the map directly:
 - **Word vs persona decomposition.** A persona vector is **91–98% behavioral residual, ~2–9%
   lexical** (and that sliver is mostly non-specific). Steering with the residual still elicits the
   trait; steering with the word-concept component is inert. **Persona ≠ word.**
+- **Cross-model (220 traits, both models; `experiments/exp1_*`).** Replicates cleanly: personas are
+  **~90% behavioral residual** on *both* Qwen (mean lexical 9.6%) and Llama (7.1%); residual-steering
+  ≈ full ≫ word-component for both. A **new question** — does a trait's lexical content depend on how
+  *common* the word is? — has a clean answer: **no.** The raw negative Qwen correlation (Spearman
+  −0.25) vanishes once you control for sub-word token count (partial +0.03); on Llama it's absent even
+  raw. Lexical leakage tracks *tokenization*, not word frequency.
 
 ### Experiment 2 — the reachable persona manifold (Section 7d–7h)
 
@@ -92,6 +105,14 @@ text's persona actually lands).
   snaps back to the manifold edge, staying coherent) and a *coherence-breakdown* wall on the +PC1
   side (pushed too hard, generation degenerates into repetition). The "gaps" beyond the teardrop
   are genuinely unreachable, not merely unsampled.
+- **Cross-model — a steerability gap tied to dimensionality (`experiments/exp2_manifold.py`).**
+  Aiming steering straight at each persona's own direction, **Qwen reaches ~86% of the way to a
+  persona before coherence breaks; Llama only ~62%** (and the coherent magnitude range is ~10× smaller
+  for Llama — its Qwen-tuned coherence proxy had to be hardened with an English-word gate). The reason
+  is geometric: **Llama's persona space is ~2× higher-dimensional** — PC1 29% / participation ratio
+  **8.9**, vs Qwen's PC1 47% / PR **4.1** (`analysis/pca_variance_*`). More distributed persona
+  features ⇒ a single steering direction captures less ⇒ lower reach. So both models *prompt* every
+  persona, but Llama is **promptable-but-not-fully-steerable** — an architecture-dependent difference.
 
 ### Experiment 3 — is persona control low-dimensional? (Section 8)
 
@@ -155,6 +176,35 @@ and the representation are the *same* ~10-dim object, not distinct.
 
 ---
 
+## Cross-model synthesis
+
+Running the whole pipeline on a second, different-provider model (Llama-3.1-8B) sharpened the story
+into one through-line: **persona is encoded more distributively in Llama than in Qwen**, and that
+single fact shows up in all three experiments.
+
+| | Qwen2.5-7B (layer 20) | Llama-3.1-8B (layer 23) |
+|---|---|---|
+| Persona-space PC1 / participation ratio | 47% / **4.1** | 29% / **8.9** |
+| Exp 1 — behavioral residual | ~90% | ~93% |
+| Exp 1 — lexical ↔ word-frequency | none (tokenization artifact) | none |
+| Exp 2 — steering reach to own persona | **0.86** | **0.62** |
+| Exp 3 — persona control subspace | compact (~k 8–16) **= persona-space PCA** | compact (~k 8–16) **= persona-space PCA** |
+
+- **Exp 1** replicates identically — "persona ≠ word" is not a Qwen quirk.
+- **Exp 2** is where the models diverge: Llama's higher-dimensional persona space makes it markedly
+  **less linearly steerable** despite being equally promptable.
+- **Exp 3** lands the same conclusion for both: persona control *is* low-dimensional, but that
+  subspace is **just the leading PCA directions of the persona representation** — not a distinct
+  causal "panel." The apparent panel dimension was a moving target set by evaluation rigor
+  (within-set memorization → data-starved-looks-highdim → emergent-with-data → but = PCA).
+
+**Method note that generalizes.** Exp 3 is also a cautionary tale for DAS/interchange work: a
+low-dim-causal-interface claim needs held-out **entities** (not just held-out pairs of seen ones),
+**enough training entities**, and a **PCA-of-the-representation baseline across multiple random
+splits** — each of which flipped a conclusion here.
+
+---
+
 ## Notebooks
 
 - **`personas.ipynb`** — the main pipeline:
@@ -169,6 +219,19 @@ and the representation are the *same* ~10-dim object, not distinct.
 - **`contrastive_extraction.ipynb`** — archived Sections 4–5 (contrastive persona-vector
   extraction + PCA "Assistant Axis"), superseded by Section 6's positive-only PCA. Run the main
   notebook's setup→core cells first in the same kernel.
+
+## Cross-model scripts (`experiments/`)
+
+Standalone, model-parameterized ports of the experiments (registry in `persona_lib.py`, prompts in
+`prompts.py`, outputs to the gitignored `experiments/results/`). Run any on Qwen or Llama via
+`--model {qwen2.5-7b, llama3.1-8b}`, submitted with the matching `run_*.sbatch` (Oscar/Slurm):
+
+- `extract_persona_vectors.py` — re-extract a new model's persona vectors (all-layer + a layer-choice
+  diagnostic).
+- `exp1_decomposition.py`, `exp1_contamination_steer.py` — Experiment 1 at pool scale.
+- `exp2_manifold.py` — Experiment 2: `--mode {calibrate, boundary, reachability, variance}`.
+- `exp3_das.py` — Experiment 3 DAS: panel sweep, `--bisect`, `--train-size-sweep`,
+  `--persona-space-check` (all persona-disjoint); `plot_das_*.py` aggregate across splits.
 
 ## Modules
 
@@ -189,6 +252,9 @@ Outputs to `figures/`: the labeled rotating persona cloud, the three Experiment-
 reachable-boundary envelope, and the two Experiment-3 panels (panel-dimension knee, interface-vs-PCA).
 Cloud/boundary figures are computed from the cached vectors and boundary maps; the Exp-1/3 figures read
 `data/exp1_results.json` / `data/exp3_results.json` (written by the notebook's cell 8k on a GPU rerun).
+
+The **cross-model** figures (Qwen vs Llama) live under `experiments/results/` and are indexed, with
+the canonical/final figure per result marked, in [`FIGURES.md`](FIGURES.md).
 
 ## Setup
 
