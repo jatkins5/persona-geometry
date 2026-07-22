@@ -85,13 +85,26 @@ results overlay the map directly:
   sitting on its own axis; at the generation-entry token it collapses to ~0. The axes are clean.
 - **Word vs persona decomposition.** A persona vector is **91–98% behavioral residual, ~2–9%
   lexical** (and that sliver is mostly non-specific). Steering with the residual still elicits the
-  trait; steering with the word-concept component is inert. **Persona ≠ word.**
+  trait. **Persona ≠ word** — cleanly so for the *vivid, distinctive* personas this measured
+  (surly, flowery, cryptic …): the word-concept component barely elicits them.
+  *(Caveat from the scaled rerun — see below: word-comp is **not** universally inert.)*
 - **Cross-model (220 traits, both models; `experiments/exp1_*`).** Replicates cleanly: personas are
-  **~90% behavioral residual** on *both* Qwen (mean lexical 9.6%) and Llama (7.1%); residual-steering
-  ≈ full ≫ word-component for both. A **new question** — does a trait's lexical content depend on how
-  *common* the word is? — has a clean answer: **no.** The raw negative Qwen correlation (Spearman
-  −0.25) vanishes once you control for sub-word token count (partial +0.03); on Llama it's absent even
-  raw. Lexical leakage tracks *tokenization*, not word frequency.
+  **~90% behavioral residual** on *both* Qwen (mean lexical 9.6%) and Llama (7.1%). A **new question**
+  — does a trait's lexical content depend on how *common* the word is? — has a clean answer: **no.**
+  The raw negative Qwen correlation (Spearman −0.25) vanishes once you control for sub-word token
+  count (partial +0.03); on Llama it's absent even raw. Lexical leakage tracks *tokenization*, not
+  word frequency.
+- **⚠️ "Word-component is inert" is an overstatement at pool scale.** The notebook's 6 (vivid) traits
+  suggested word-concept steering does nothing, but over the full 220 the word-component recovers,
+  on average, **~62% of the full vector's trait expression** (residual ~90–94%; both models). It's
+  **bimodal** (`analysis/exp1_wordcomp_bimodal.png`): for *vivid/stylistic* personas word-comp ≈ 0
+  (e.g. `flowery` full-vs-word judge 9→2 — ornate "treasures of the human soul" collapses to plain
+  prose), so **persona ≠ word holds strongly there**; but for *abstract/semantic* traits (scholarly,
+  erudite, intelligent, diplomatic …) word-comp ≈ full, because the trait *is* the word's meaning.
+  Part of that high end is a **judge confound** — the neutral eval questions elicit
+  scholarly/intelligent-sounding text by default, so all conditions score high regardless of steering.
+  Net: persona ≠ word is real and clean for distinctive personas, but the word-concept direction is
+  not universally inert.
 
 ### Experiment 2 — the reachable persona manifold (Section 7d–7h)
 
@@ -186,11 +199,14 @@ single fact shows up in all three experiments.
 |---|---|---|
 | Persona-space PC1 / participation ratio | 47% / **4.1** | 29% / **8.9** |
 | Exp 1 — behavioral residual | ~90% | ~93% |
+| Exp 1 — word-comp recovers (pooled) | ~62% of full (bimodal) | ~62% of full (bimodal) |
 | Exp 1 — lexical ↔ word-frequency | none (tokenization artifact) | none |
 | Exp 2 — steering reach to own persona | **0.86** | **0.62** |
 | Exp 3 — persona control subspace | compact (~k 8–16) **= persona-space PCA** | compact (~k 8–16) **= persona-space PCA** |
 
-- **Exp 1** replicates identically — "persona ≠ word" is not a Qwen quirk.
+- **Exp 1** replicates identically — "persona ≠ word" is not a Qwen quirk (cleanly for vivid
+  personas; the word-concept component is only weak *there*, not universally — it recovers ~62% of
+  the trait pooled, bimodally).
 - **Exp 2** is where the models diverge: Llama's higher-dimensional persona space makes it markedly
   **less linearly steerable** despite being equally promptable.
 - **Exp 3** lands the same conclusion for both: persona control *is* low-dimensional, but that

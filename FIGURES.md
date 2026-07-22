@@ -9,6 +9,9 @@ caches, slurm logs — is gitignored). **★ = the canonical/final figure for a 
 - ★ `exp1_decomposition__llama3.1-8b/scatter_frequency_vs_lexical.png` — Llama, same.
 - ★ `exp1_contamination_steer/{contamination_ratios,steering_scores}.png` — Qwen 7a/7c (220 traits).
 - ★ `exp1_contamination_steer__llama3.1-8b/{contamination_ratios,steering_scores}.png` — Llama.
+- ★ `analysis/exp1_wordcomp_bimodal.png` — word-component vs full steering per trait: the
+  word-concept component is **not inert** (~65% of full pooled); bimodal (persona ≠ word for vivid
+  personas, persona ≈ word for semantic traits).
 - `exp1_contam_smoke/*` — 4-trait smoke test (superseded).
 
 ## Experiment 2 — reachable manifold + dimensionality
